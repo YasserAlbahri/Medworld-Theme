@@ -1,0 +1,13 @@
+.DS_Store
+*.pyc
+*.egg-info
+*.swp
+tags
+node_modules
+medworld_theme/public/node_modules
+medworld_theme/public/dist
+medworld_theme/public/js/vue
+medworld_theme/public/js/frappe
+medworld_theme/public/js/medworld_theme.bundle.js
+medworld_theme/public/js/medworld_theme_web.bundle.js
+__pycache__

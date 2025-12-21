@@ -1,0 +1,58 @@
+.form-control {
+
+}
+.chosen-container-single .chosen-single div:after {
+  background: none $imp;
+  display: none $imp;
+}
+
+// Improve Table MultiSelect pill wrapping and width
+.frappe-control {
+  &.input-max-width {
+    max-width: 100% $imp;
+    width: 100% $imp;
+  }
+
+  .table-multiselect {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 10px;
+    margin-top: 6px;
+    min-height: 52px;
+    width: 100%;
+    overflow: visible;
+    line-height: 1.3;
+
+    .tb-selected-value {
+      display: inline-flex;
+      align-items: center;
+      margin: 3px 4px 3px 0;
+      flex: 0 0 auto;
+      max-width: 100%;
+      word-break: break-word;
+      white-space: normal;
+    }
+
+    .awesomplete,
+    .awesomplete > input {
+      flex: 1 1 320px;
+      min-width: 140px;
+      width: auto;
+      max-width: 100%;
+    }
+  }
+}
+
+// إخفاء النص المساعد أسفل حقول الوقت
+.frappe-control[data-fieldtype="Time"] .help-box {
+  display: none !important;
+}
+
+// إخفاء النص المساعد أسفل حقول التاريخ والوقت أيضاً
+.frappe-control[data-fieldtype="Datetime"] .help-box,
+.frappe-control[data-fieldtype="Time"] .help-box {
+  display: none !important;
+}
+

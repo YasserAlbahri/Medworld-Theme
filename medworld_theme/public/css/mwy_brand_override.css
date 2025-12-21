@@ -1,0 +1,5 @@
+/* Hide "Powered by" bar in Desk footer */
+.desk-footer .powered-by,
+.web-footer-powered {
+	display: none !important;
+}
