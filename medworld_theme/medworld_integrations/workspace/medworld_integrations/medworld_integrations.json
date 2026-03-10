@@ -6,10 +6,10 @@
  "docstatus": 0,
  "doctype": "Workspace",
  "for_user": "",
- "hide_custom": 0,
- "icon": "flaticon-configuration",
+ "hide_custom": 1,
+ "icon": "fal fa-folder",
  "idx": 0,
- "is_hidden": 0,
+ "is_hidden": 1,
  "label": "Medworld Integrations",
  "links": [
   {
@@ -203,7 +203,7 @@
    "type": "Link"
   }
  ],
- "modified": "2025-12-19 23:35:45.693846",
+ "modified": "2026-02-16 02:28:11.520101",
  "modified_by": "Administrator",
  "module": "Medworld Integrations",
  "name": "Medworld Integrations",
@@ -216,9 +216,12 @@
  "roles": [
   {
    "role": "Administrator"
+  },
+  {
+   "role": "System Manager"
   }
  ],
- "sequence_id": 38.0,
+ "sequence_id": 40.0,
  "shortcuts": [
   {
    "color": "Grey",

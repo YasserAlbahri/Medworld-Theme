@@ -3,3 +3,16 @@
 .web-footer-powered {
 	display: none !important;
 }
+
+/* Hide chat widget everywhere */
+/* .chat-app, .chat-navbar-icon { display: none !important; } */
+
+/* Force chat icon to show if any script hides it */
+.chat-navbar-icon {
+	display: inline-block !important;
+	cursor: pointer;
+}
+.chat-navbar-icon * {
+	cursor: pointer !important;
+	pointer-events: auto;
+}

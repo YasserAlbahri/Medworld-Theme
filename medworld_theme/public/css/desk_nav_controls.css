@@ -1,0 +1,45 @@
+#mw-desk-nav-controls {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgba(31, 68, 107, 0.35);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-inline-start: 8px;
+  background: rgba(0, 0, 0, 0.02);
+}
+
+#mw-desk-nav-controls .mw-nav-btn {
+  width: 34px;
+  height: 34px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  line-height: 1;
+}
+
+#mw-desk-nav-controls .mw-nav-btn + .mw-nav-btn {
+  border-inline-start: 1px solid rgba(31, 68, 107, 0.28);
+}
+
+#mw-desk-nav-controls .mw-nav-btn:hover {
+  background: rgba(46, 144, 255, 0.1);
+}
+
+#mw-desk-nav-controls .mw-nav-btn:disabled,
+#mw-desk-nav-controls .mw-nav-btn[disabled] {
+  cursor: default;
+  opacity: 0.45;
+  background: transparent;
+}
+
+.navbar #mw-desk-nav-controls {
+  margin-inline-start: 6px;
+}
+
+.dv-navbar #mw-desk-nav-controls {
+  margin-inline-start: 10px;
+}

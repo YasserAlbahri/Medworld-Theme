@@ -314,6 +314,116 @@ https://ysa-tech.com
 </script>
 <script>{% include "templates/includes/login/login.js" %}</script>
 <script>
+// Fallback: ensure login submit posts cmd=login even if login.js doesn't bind.
+const bindPasswordToggle = function () {
+    const eye = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-eye font-small-4"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>';
+    const eyeOff = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-eye-off font-small-4"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>';
+    document.addEventListener('click', function (event) {
+        const btn = event.target && event.target.closest ? event.target.closest('.toggle-password') : null;
+        if (!btn) return;
+        const selector = btn.getAttribute('toggle');
+        if (!selector) return;
+        const input = document.querySelector(selector);
+        if (!input) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        if (input.type === 'password') {
+            input.type = 'text';
+            btn.innerHTML = eyeOff;
+        } else {
+            input.type = 'password';
+            btn.innerHTML = eye;
+        }
+    }, true);
+};
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bindPasswordToggle);
+} else {
+    bindPasswordToggle();
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    const forms = Array.from(document.querySelectorAll('form.form-login'));
+    if (!forms.length) return;
+
+    window.login_submit_handled = false;
+
+    const showError = function (msg) {
+        try {
+            if (window.frappe && frappe.msgprint) {
+                frappe.msgprint(msg);
+                return;
+            }
+        } catch (e) {
+            // ignore, fall back to inline message
+        }
+        const container = document.querySelector('.login-content.page-card');
+        if (container) {
+            container.classList.add('invalid-login');
+            setTimeout(() => container.classList.remove('invalid-login'), 500);
+        }
+    };
+
+    const submitLogin = function (event) {
+        if (window.login_submit_handled) {
+            if (event) {
+                event.preventDefault();
+                event.stopImmediatePropagation();
+            }
+            return;
+        }
+        window.login_submit_handled = true;
+        if (event) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+        }
+
+        const formEl = event && event.target
+            ? (event.target.closest('form.form-login') || event.target.closest('form'))
+            : null;
+        const usrEl = (formEl && formEl.querySelector('#login_email')) || document.getElementById('login_email');
+        const pwdEl = (formEl && formEl.querySelector('#login_password')) || document.getElementById('login_password');
+        const usr = (usrEl && usrEl.value || '').trim();
+        const pwd = (pwdEl && pwdEl.value) || '';
+
+        if (!usr || !pwd) {
+            showError('{{ _("Both login and password required") }}');
+            window.login_submit_handled = false;
+            return;
+        }
+
+        const body = new URLSearchParams({ usr: usr, pwd: pwd });
+        fetch('/api/method/login', {
+            method: 'POST',
+            headers: { 'Accept': 'application/json' },
+            body
+        })
+        .then(resp => resp.json().catch(() => ({})).then(data => ({ resp, data })))
+        .then(({ resp, data }) => {
+            if (resp.ok && data && data.message === 'Logged In') {
+                window.location.href = data.home_page || '/app';
+                return;
+            }
+            showError('{{ _("Invalid Login. Try again.") }}');
+        })
+        .catch(() => {
+            showError('{{ _("Oops! Something went wrong") }}');
+        })
+        .finally(() => {
+            window.login_submit_handled = false;
+        });
+    };
+
+    forms.forEach((formEl) => {
+        formEl.addEventListener('submit', submitLogin, true);
+    });
+    document.querySelectorAll('.btn-login').forEach((btn) => {
+        btn.addEventListener('click', submitLogin, true);
+    });
+});
+</script>
+<script>
 	// Force any attempt to access the forgot-password view back to login.
 	frappe.ready(function () {
 		const forceLoginRoute = () => {

@@ -1,0 +1,39 @@
+{
+  "id": "/app",
+  "name": "Medworld",
+  "short_name": "Medworld",
+  "description": "Medworld hospital system progressive web application.",
+  "start_url": "/app",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui",
+    "browser"
+  ],
+  "lang": "ar",
+  "dir": "rtl",
+  "orientation": "portrait-primary",
+  "background_color": "#061a2f",
+  "theme_color": "#0b2e4f",
+  "prefer_related_applications": false,
+  "categories": [
+    "medical",
+    "business",
+    "productivity"
+  ],
+  "icons": [
+    {
+      "src": "/assets/medworld_theme/images/logo-xs.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/medworld_theme/images/logo-xs.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

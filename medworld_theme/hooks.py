@@ -17,28 +17,39 @@ website_context = {
     "splash_image": "/assets/medworld_theme/images/theme_splash_empty.jpg"
 }
 
-before_request = ["medworld_theme.utils.redirect_password_routes"]
+before_request = [
+    "medworld_theme.utils.redirect_password_routes",
+    "medworld_theme.utils.log_login_post_debug",
+]
 
 app_include_css = [
-    "/assets/medworld_theme/plugins/animate.css/animate.min.css",
+    f"/assets/medworld_theme/plugins/animate.css/animate.min.css?v={app_version}",
     "/assets/medworld_theme/plugins/fontawesome/all.min.css",
     "/assets/medworld_theme/plugins/tooltip/tooltip-theme-twipsy.css",
     "/assets/medworld_theme/plugins/flat-icons/flaticon.css",
     "/assets/medworld_theme/plugins/simple-calendar/simple-calendar.css",
     "medworld_theme.bundle.css",
     f"/assets/medworld_theme/css/mwy_brand_override.css?v={app_version}",
+    f"/assets/medworld_theme/css/desk_nav_controls.css?v={app_version}",
+    f"/assets/medworld_theme/css/pwa_install_mobile.css?v={app_version}",
 ]
 
 app_include_js = [
-    "/assets/medworld_theme/plugins/vue/vue.js",
-    "/assets/medworld_theme/plugins/bootstrap4c-chosen/chosen.min.js",
-    "/assets/medworld_theme/plugins/nicescroll/nicescroll.js",
-    "/assets/medworld_theme/plugins/tooltip/tooltip.js",
-    "/assets/medworld_theme/plugins/jquery-fullscreen/jquery.fullscreen.min.js?ver=1",
-    "/assets/medworld_theme/plugins/simple-calendar/jquery.simple-calendar.js",
-    "/assets/medworld_theme/js/medworld_theme.app.min.js",
-    f"/assets/medworld_theme/js/mwy_rebrand.js?v={app_version}",
-    # "medworld_theme.bundle.js"
+	"/assets/medworld_theme/plugins/vue/vue.js",
+	"/assets/medworld_theme/plugins/bootstrap4c-chosen/chosen.min.js",
+	"/assets/medworld_theme/plugins/nicescroll/nicescroll.js",
+	"/assets/medworld_theme/plugins/tooltip/tooltip.js",
+	"/assets/medworld_theme/plugins/jquery-fullscreen/jquery.fullscreen.min.js?ver=1",
+	"/assets/medworld_theme/plugins/simple-calendar/jquery.simple-calendar.js",
+	f"/assets/medworld_theme/js/medworld_theme.app.min.js?v={app_version}",
+	f"/assets/medworld_theme/js/navbar_user_info.js?v={app_version}",
+	f"/assets/medworld_theme/js/mwy_rebrand.js?v={app_version}",
+	f"/assets/medworld_theme/js/desk_nav_controls.js?v={app_version}",
+	f"/assets/medworld_theme/js/smart_open_desktop.js?v={app_version}",
+	f"/assets/medworld_theme/js/pwa_install_mobile.js?v={app_version}",
+	f"/assets/medworld_theme/js/duplicate_tab_hotkey.js?v={app_version}",
+	f"/assets/medworld_theme/js/assets_recovery_guard.js?v={app_version}",
+	# "medworld_theme.bundle.js"
 ]
 
 email_brand_image = "assets/medworld_theme/images/logo-v.png"
@@ -47,10 +58,14 @@ email_brand_image = "assets/medworld_theme/images/logo-v.png"
 web_include_css = [
     "assets/medworld_theme/plugins/fontawesome/all.min.css",
     "assets/medworld_theme/css/login.css",
-    "assets/medworld_theme/css/dv-login.css?ver=" + app_version
+    "assets/medworld_theme/css/dv-login.css?ver=" + app_version,
+    f"/assets/medworld_theme/css/pwa_install_mobile.css?v={app_version}",
 ]
 web_include_js = [
-    "/assets/medworld_theme/js/medworld_theme.web.min.js?ver=" + app_version
+    "/assets/frappe/js/lib/jquery/jquery.min.js",
+    "/assets/medworld_theme/js/medworld_theme.web.min.js?ver=" + app_version,
+    f"/assets/medworld_theme/js/smart_open_desktop.js?v={app_version}",
+    f"/assets/medworld_theme/js/pwa_install_mobile.js?v={app_version}",
 ]
 
 # include js, css files in header of desk.html
@@ -73,7 +88,62 @@ web_include_js = [
 
 # include js in doctype views
 # doctype_js = {"doctype" : "public/js/doctype.js"}
-# doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
+doctype_list_js = {
+    # Keep Workspace list primary action visible without touching theme page mode
+    "Workspace": "public/js/workspace_list.js",
+}
+# Inject menu visibility helper into User form
+doctype_js = {
+    "User": "public/js/user_menu_hide.js",
+    "Patient Encounter": "public/js/patient_encounter_practitioner.js",
+    "Advice And Plan Of Patient": "public/js/practitioner_autofill_form.js",
+    "Clinical Procedure": "public/js/practitioner_autofill_form.js",
+    "Examination": "public/js/practitioner_autofill_form.js",
+    "Examination Summary": "public/js/practitioner_autofill_form.js",
+    "Follow Up": "public/js/practitioner_autofill_form.js",
+    "History": "public/js/practitioner_autofill_form.js",
+    "History Summary": "public/js/practitioner_autofill_form.js",
+    "Inpatient Medication Entry": "public/js/practitioner_autofill_form.js",
+    "Inpatient Medication Order": "public/js/practitioner_autofill_form.js",
+    "Inpatient Record": "public/js/practitioner_autofill_form.js",
+    "Input and Output Chart": "public/js/practitioner_autofill_form.js",
+    "Medication Request": "public/js/practitioner_autofill_form.js",
+    "Nutrition Values Chart": "public/js/practitioner_autofill_form.js",
+    "Observation": "public/js/practitioner_autofill_form.js",
+    "Patient Assessment": "public/js/practitioner_autofill_form.js",
+    "Patient Feedback": "public/js/practitioner_autofill_form.js",
+    "Patient Follow Up Summary": "public/js/practitioner_autofill_form.js",
+    "Patient Hospital Courses": "public/js/practitioner_autofill_form.js",
+    "Patient Morbidity Summary": "public/js/practitioner_autofill_form.js",
+    "Patient Mortality Summary": "public/js/practitioner_autofill_form.js",
+    "Patient Timeline": "public/js/practitioner_autofill_form.js",
+    "Service Request": "public/js/practitioner_autofill_form.js",
+    "Therapy Session": "public/js/practitioner_autofill_form.js",
+    "Vital Signs Chart": "public/js/practitioner_autofill_form.js",
+}
+
+# Auto-fill practitioner link fields using logged-in user's linked practitioner.
+# If user has no linked practitioner, document stays unchanged.
+doc_events = {
+	"*": {
+		"validate": "medworld_theme.practitioner_autofill.autofill_practitioner_fields",
+	}
+}
+
+override_whitelisted_methods = {
+    "frappe.desk.desktop.get_desktop_page": "medworld_theme.api.get_desktop_page",
+    "frappe.desk.desktop.get_workspace_sidebar_items": "medworld_theme.api.get_workspace_sidebar_items",
+    "frappe.desk.form.load.getdoc": "medworld_theme.api.safe_getdoc",
+    "frappe.core.doctype.user.user.reset_password": "medworld_theme.api.reset_password_disabled",
+    # Enforce "no notifications / no update prompts" at the session bootstrap endpoint.
+    "frappe.sessions.get": "medworld_theme.api.sessions_get",
+}
+
+# Hard-disable desk notifications + update prompts for client delivery.
+# This is enforced at boot time for every user.
+extend_bootinfo = [
+    "medworld_theme.boot.extend_bootinfo",
+]
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
 
@@ -87,6 +157,8 @@ web_include_js = [
 
 # application home page (will override Website Settings)
 # home_page = "login"
+
+# (keep before_request defined above)
 
 # website user home page (by Role)
 # role_home_page = {
@@ -203,9 +275,6 @@ web_include_js = [
 # Overriding Methods
 # ------------------------------
 #
-override_whitelisted_methods = {
-    "frappe.core.doctype.user.user.reset_password": "medworld_theme.api.reset_password_disabled"
-}
 #
 # each overriding function accepts a `data` argument;
 # generated from the base implementation of the doctype dashboard,

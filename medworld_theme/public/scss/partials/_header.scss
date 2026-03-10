@@ -343,10 +343,12 @@
       background-size: contain;
       width: 180px;
       height: 42px;
-      display: block;
+      display: block !important;
       float: left;
       position: relative;
       margin: 2px 0px 0px 18px;
+      visibility: visible !important;
+      opacity: 1 !important;
 
       a {
         position: absolute;
@@ -606,6 +608,21 @@ html.dv-admin-quick-actions .dv-quick-action {
 .dv-navbar .dv-nav-left .navbar-breadcrumbs {
   flex: 1 1 auto;
   min-width: 0;
+}
+
+// Ensure logo is always visible in navbar, even with dv-logo-hard-hide class
+.dv-navbar .dv-nav-left .logo {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+// Override any hiding rules for navbar logo
+body.dv-logo-hard-hide .dv-navbar .dv-nav-left .logo,
+html.dv-logo-hard-hide .dv-navbar .dv-nav-left .logo {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
 }
 
 // إصلاح قوي لمشكلة ظهور قائمة Help

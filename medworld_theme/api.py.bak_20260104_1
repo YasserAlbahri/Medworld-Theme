@@ -1,0 +1,1297 @@
+from __future__ import unicode_literals
+import os, re, json, copy, hashlib
+import frappe
+from frappe.translate import get_all_translations
+from frappe.utils import flt, cint, get_time, make_filter_tuple, get_filter, add_to_date, cstr, get_timespan_date_range, nowdate, add_days, getdate, add_months, get_datetime
+from frappe import _
+from frappe.desk.reportview import get_filters_cond
+from frappe.desk.desktop import (
+    get_desktop_page as core_get_desktop_page,
+    get_workspace_sidebar_items as core_get_workspace_sidebar_items,
+)
+from frappe.cache_manager import clear_user_cache
+from six import string_types
+
+_TRANSLATIONS_CACHE = {}
+_TRANSLATIONS_REVERSE_CACHE = {}
+_MENU_HIDE_COLUMNS = None
+
+def _get_translations_cached(lang):
+    lang = lang or "en"
+    cached = _TRANSLATIONS_CACHE.get(lang)
+    if cached is None:
+        cached = get_all_translations(lang) or {}
+        _TRANSLATIONS_CACHE[lang] = cached
+    return cached
+
+
+def _get_reverse_translations_cached(lang):
+    lang = lang or "en"
+    cached = _TRANSLATIONS_REVERSE_CACHE.get(lang)
+    if cached is None:
+        translations = _get_translations_cached(lang) or {}
+        reverse = {}
+        for src, translated in translations.items():
+            if not translated:
+                continue
+            key = _norm(translated)
+            if not key:
+                continue
+            if key not in reverse:
+                reverse[key] = src
+        _TRANSLATIONS_REVERSE_CACHE[lang] = reverse
+        cached = reverse
+    return cached
+
+
+def _get_menu_hide_columns():
+    global _MENU_HIDE_COLUMNS
+    if _MENU_HIDE_COLUMNS is None:
+        try:
+            cols = frappe.db.sql("SHOW COLUMNS FROM `tabUser Menu Hide Item`", as_dict=True)
+            _MENU_HIDE_COLUMNS = {c.get("Field") for c in cols}
+        except Exception:
+            _MENU_HIDE_COLUMNS = set()
+    return _MENU_HIDE_COLUMNS
+
+
+def _has_menu_hide_column(fieldname):
+    return fieldname in _get_menu_hide_columns()
+
+
+@frappe.whitelist(allow_guest=True)
+def reset_password_disabled(**_):
+    frappe.throw(_("Password reset is disabled for this site."), frappe.PermissionError)
+
+
+@frappe.whitelist()
+def get_module_name_from_doctype(doc_name, current_module=""):
+    if not doc_name:
+        return
+
+    params = [doc_name]
+    conditions = ["l.link_to = %s"]
+    if current_module:
+        conditions.append("w.name = %s")
+        params.append(current_module)
+
+    where = " AND ".join(conditions)
+    query = """
+        SELECT w.name AS module,
+               (SELECT restrict_to_domain FROM `tabModule Def` WHERE name = w.module) AS restrict_to_domain
+        FROM `tabWorkspace` w
+        INNER JOIN `tabWorkspace Link` l ON w.name = l.parent
+        WHERE {where}
+    """.format(where=where)
+
+    res = frappe.db.sql(query, params, as_dict=True, debug=False)
+    if res:
+        return [{"module": res[0]["module"]}]
+
+
+@frappe.whitelist()
+def change_language(language):
+    frappe.db.set_value("User", frappe.session.user, "language", language)
+    clear()
+    return True
+
+
+@frappe.whitelist()
+def get_current_language():
+    return frappe.db.get_value("User", frappe.session.user, "language")
+
+
+@frappe.whitelist(allow_guest=True)
+def get_label_translations(labels=None, lang=None):
+    """Return translations for the given labels using language files/user translations."""
+    lang = lang or frappe.local.lang or "en"
+    if not labels:
+        return {}
+
+    if isinstance(labels, str):
+        try:
+            labels = json.loads(labels)
+        except Exception:
+            labels = [labels]
+
+    if not isinstance(labels, (list, tuple, set)):
+        labels = [labels]
+
+    translations = _get_translations_cached(lang)
+    result = {}
+    for label in labels:
+        if not isinstance(label, str):
+            continue
+        translated = translations.get(label)
+        if translated and translated != label:
+            result[label] = translated
+
+    return result
+
+
+@frappe.whitelist(allow_guest=True)
+def get_enabled_languages():
+    """Return list of enabled languages with their details"""
+    from frappe.translate import get_all_languages
+    
+    enabled_languages = get_all_languages(with_language_name=True)
+    languages_list = []
+    
+    # Debug: طباعة البيانات المستلمة
+    frappe.logger().info(f"get_enabled_languages: Received {len(enabled_languages) if enabled_languages else 0} languages from get_all_languages")
+    
+    # إذا كانت القائمة فارغة أو لم تُرجع البيانات بالشكل المتوقع
+    if not enabled_languages:
+        # محاولة بديلة: جلب اللغات مباشرة من قاعدة البيانات
+        frappe.logger().info("get_enabled_languages: Using fallback method - fetching directly from database")
+        languages = frappe.get_all("Language", 
+            filters={"enabled": 1}, 
+            fields=["language_code", "language_name"],
+            order_by="language_name"
+        )
+        frappe.logger().info(f"get_enabled_languages: Found {len(languages)} languages from database")
+        for lang in languages:
+            lang_code = (lang.get('language_code') or '').upper()
+            lang_name = lang.get('language_name') or lang_code
+
+            # تحديد العلم بناءً على كود اللغة
+            flag_class = 'dv-lang-flag lang-en'
+            if lang_code == 'AR' or lang_code.startswith('AR'):
+                flag_class = 'dv-lang-flag lang-ar'
+            elif lang_code == 'EN' or lang_code.startswith('EN'):
+                flag_class = 'dv-lang-flag lang-en'
+            
+            languages_list.append({
+                'code': lang_code,
+                'name': lang_name,
+                'flag': flag_class,
+                'label': lang_code
+            })
+    else:
+        # استخدام البيانات من get_all_languages
+        for lang in enabled_languages:
+            # التحقق من نوع البيانات المرجعة
+            if isinstance(lang, dict):
+                lang_code = lang.get('language_code', '').upper()
+                lang_name = lang.get('language_name', lang_code)
+            else:
+                # إذا كانت البيانات قائمة (tuple أو list)
+                lang_code = (lang[0] if len(lang) > 0 else '').upper()
+                lang_name = lang[1] if len(lang) > 1 else lang_code
+            
+            if not lang_code:
+                continue
+                
+            # تحديد العلم بناءً على كود اللغة
+            flag_class = 'dv-lang-flag lang-en'
+            if lang_code == 'AR' or lang_code.startswith('AR'):
+                flag_class = 'dv-lang-flag lang-ar'
+            elif lang_code == 'EN' or lang_code.startswith('EN'):
+                flag_class = 'dv-lang-flag lang-en'
+            
+            languages_list.append({
+                'code': lang_code,
+                'name': lang_name,
+                'flag': flag_class,
+                'label': lang_code
+            })
+    
+    frappe.logger().info(f"get_enabled_languages: Returning {len(languages_list)} languages: {[lang['code'] for lang in languages_list]}")
+    return languages_list
+
+
+@frappe.whitelist()
+def get_company_logo():
+    logo_path = ""
+    current_company = frappe.defaults.get_user_default("company")
+    if current_company:
+        logo_path = frappe.db.get_value("Company", current_company, "company_logo")
+
+    return logo_path
+
+
+@frappe.whitelist(allow_guest=True)
+def get_theme_settings():
+    slideshow_photos = []
+    settings_list = {}
+    settings = frappe.db.sql("""
+                       SELECT * FROM tabSingles WHERE doctype = 'Theme Settings';
+    """, as_dict=True, debug=False)
+
+    for setting in settings:
+        settings_list[setting['field']] = setting['value']
+
+    if (("background_type" in settings_list) and settings_list['background_type'] == 'Slideshow'):
+        slideshow_photos = frappe.db.sql("""
+                               SELECT `photo` FROM `tabSlideshow Photos` WHERE `parent` = 'Theme Settings';
+            """, as_dict=True, debug=False)
+
+    return {
+        'enable_background': settings_list['enable_background'] if ("enable_background" in settings_list) else '',
+        'background_photo': settings_list['background_photo'] if ("background_photo" in settings_list) else '',
+        'background_type': settings_list['background_type'] if ("background_type" in settings_list) else '',
+        'full_page_background': settings_list['full_page_background'] if ("full_page_background" in settings_list) else '',
+        'transparent_background': settings_list['transparent_background'] if ("transparent_background" in settings_list) else '',
+        'slideshow_photos': slideshow_photos,
+        'dark_view': settings_list['dark_view'] if ("dark_view" in settings_list) else '',
+        'theme_color': settings_list['theme_color'] if ("theme_color" in settings_list) else '',
+        'open_workspace_on_mobile_menu': settings_list['open_workspace_on_mobile_menu'] if ("open_workspace_on_mobile_menu" in settings_list) else '',
+        'show_icon_label': settings_list['show_icon_label'] if ("show_icon_label" in settings_list) else '',
+        'hide_icon_tooltip': settings_list['hide_icon_tooltip'] if ("hide_icon_tooltip" in settings_list) else '',
+        'always_close_sub_menu': settings_list['always_close_sub_menu'] if ("always_close_sub_menu" in settings_list) else '',
+        'menu_opening_type': settings_list['menu_opening_type'] if ("menu_opening_type" in settings_list) else '',
+        'loading_image': settings_list['loading_image'] if ("loading_image" in settings_list) else ''
+    }
+
+
+@frappe.whitelist()
+def get_raw_commands_hex(doc: str, name: str | None = None, print_format: str | None = None):
+    """Return rendered raw commands encoded as CP864 hex for QZ raw printing."""
+    from frappe.www.printview import get_print_format_doc, get_rendered_template
+
+    if isinstance(name, str):
+        document = frappe.get_doc(doc, name)
+    else:
+        if isinstance(doc, str):
+            document = frappe.get_doc(json.loads(doc))
+        else:
+            document = frappe.get_doc(doc)
+
+    document.check_permission()
+    print_format = get_print_format_doc(print_format, meta=document.meta)
+
+    if not print_format or (print_format and not print_format.raw_printing):
+        frappe.throw(
+            _("{0} is not a raw printing format.").format(print_format),
+            frappe.TemplateNotFoundError,
+        )
+
+    raw = get_rendered_template(doc=document, print_format=print_format, meta=document.meta)
+    data = (raw or "").encode("cp864", errors="replace")
+    return {"raw_hex": data.hex().upper()}
+
+
+@frappe.whitelist()
+def update_theme_settings(**data):
+    data = frappe._dict(data)
+    doc = frappe.get_doc("Theme Settings")
+    doc.theme_color = data.theme_color
+    doc.apply_on_menu = data.apply_on_menu
+    doc.apply_on_dashboard = data.apply_on_dashboard
+    doc.apply_on_workspace = data.apply_on_workspace
+    doc.apply_on_navbar = data.apply_on_navbar
+    doc.save(ignore_permissions=True)
+    return doc
+
+
+@frappe.whitelist()
+def get_hidden_menu_items(user=None):
+    """Return list of menu items to hide for the given user (or current session user)."""
+    user = user or frappe.session.user
+    field_candidates = [
+        "name",
+        "modified",
+        "workspace",
+        "item_type",
+        "item_kind",
+        "item_route",
+        "item_label",
+        "item_label_ar",
+        "item_name",
+        "block_id",
+        "hide",
+    ]
+    fields = [f for f in field_candidates if _has_menu_hide_column(f)]
+    if not fields:
+        return []
+    rows = frappe.db.get_all("User Menu Hide Item", fields=fields, filters={"parent": user})
+    return rows or []
+
+
+@frappe.whitelist()
+def get_user_menu_items(user=None):
+    """Return visible workspace-linked items (rough outline of sidebar) for a user."""
+    user = user or frappe.session.user
+
+    def allowed_for_user(doctype, link_type):
+        if link_type in ("DocType", "Report", "Page"):
+            return frappe.has_permission(doctype, "read", user=user)
+        return True
+
+    has_published = frappe.db.has_column("Workspace", "published")
+    has_ws_hidden = frappe.db.has_column("Workspace", "is_hidden")
+    has_link_hidden = frappe.db.has_column("Workspace Link", "is_hidden")
+    has_ws_role = frappe.db.has_table("Workspace Role")
+
+    user_doc = frappe.get_cached_doc("User", user)
+    user_roles = frappe.get_roles(user)
+    allow_mods = [r.module for r in (getattr(user_doc, "allow_modules", []) or []) if getattr(r, "module", None)]
+    block_mods = [r.module for r in (getattr(user_doc, "block_modules", []) or []) if getattr(r, "module", None)]
+
+    where_clauses = []
+    if has_ws_hidden:
+        where_clauses.append("ifnull(w.is_hidden,0)=0")
+    where_clauses.append("ifnull(w.for_user,'') IN ('', %(user)s)")
+    if has_published:
+        where_clauses.append("ifnull(w.published,1)=1")
+    if allow_mods:
+        where_clauses.append("coalesce(w.module,'') in %(allow_mods)s")
+    if block_mods:
+        where_clauses.append("coalesce(w.module,'') not in %(block_mods)s")
+    if has_ws_role:
+        where_clauses.append("(wr.role is null or wr.role in %(roles)s)")
+
+    where_sql = " AND ".join(where_clauses) if where_clauses else "1=1"
+    rows = frappe.db.sql(
+        f"""
+        SELECT w.name AS workspace,
+               COALESCE(l.link_to, l.link_to) AS target,
+               l.link_type AS link_type,
+               COALESCE(l.label, l.link_to, w.name) AS label,
+               l.link_to AS route
+        FROM `tabWorkspace` w
+        {"LEFT JOIN `tabWorkspace Role` wr ON wr.parent = w.name" if has_ws_role else ""}
+        INNER JOIN `tabWorkspace Link` l ON w.name = l.parent
+        WHERE {where_sql}
+          {"AND ifnull(l.is_hidden,0)=0" if has_link_hidden else ""}
+        ORDER BY w.sequence_id, w.name, l.idx
+        """,
+        {
+            "user": user,
+            "roles": user_roles or ["Guest"],
+            "allow_mods": allow_mods or [],
+            "block_mods": block_mods or [],
+        },
+        as_dict=True,
+    )
+
+    result = []
+    for r in rows:
+        target = r.get("target") or ""
+        link_type = r.get("link_type") or ""
+        label = r.get("label") or target
+        route = target
+        if not allowed_for_user(target, link_type):
+            continue
+        result.append(
+            {
+                "workspace": r.get("workspace"),
+                "item_type": link_type or "Link",
+                "item_kind": link_type or "Link",
+                "item_route": route,
+                "item_label": label,
+                "item_name": r.get("name") or "",
+            }
+        )
+    return result
+
+
+def _norm(val):
+    return (val or "").strip().lower()
+
+def _kind_bucket(kind):
+    kind_val = _norm(kind).replace("_", " ")
+    if kind_val in ("doctype", "report", "page", "link"):
+        return "link"
+    return kind_val
+
+
+def _hash_block_id(value):
+    return hashlib.sha1(value.encode("utf-8")).hexdigest()
+
+
+def _card_block_id(card, ws_name="", idx=None):
+    if not isinstance(card, dict):
+        return ""
+    name = card.get("name") or card.get("id") or card.get("_id")
+    if name:
+        return str(name)
+    link_keys = []
+    for l in card.get("links") or []:
+        link_type = l.get("link_type") or l.get("type") or ""
+        link_to = l.get("link_to") or l.get("name") or l.get("label") or ""
+        if link_to:
+            link_keys.append(f"{link_type}:{link_to}")
+    if link_keys:
+        base = "|".join(sorted(link_keys))
+        return _hash_block_id(f"{ws_name}::card::{base}")
+    label = card.get("label") or ""
+    if label:
+        return _hash_block_id(f"{ws_name}::card::label::{label}")
+    if idx is None:
+        return ""
+    return _hash_block_id(f"{ws_name}::card::idx::{idx}")
+
+
+def _entry_key(entry):
+    kind = _kind_bucket(entry.get("kind") or "")
+    workspace = entry.get("workspace") or ""
+    ent_block = entry.get("block_id") or ""
+    ent_name = entry.get("name") or ""
+    ent_route = entry.get("route") or ""
+    ent_label = entry.get("label") or ""
+    ent_label_ar = entry.get("label_ar") or ""
+    db_name = entry.get("db_name") or ""
+    if kind == "workspace":
+        ident = ent_route or ent_name or ent_label or ent_label_ar or db_name
+    else:
+        ident = ent_block or ent_name or ent_route or ent_label or ent_label_ar or db_name
+    return (workspace, kind, ident)
+
+
+def _dedupe_hidden_entries(entries):
+    best = {}
+    for ent in entries:
+        key = _entry_key(ent)
+        prev = best.get(key)
+        if not prev:
+            best[key] = ent
+            continue
+        prev_mod = prev.get("modified") or ""
+        ent_mod = ent.get("modified") or ""
+        if ent_mod >= prev_mod:
+            best[key] = ent
+    return list(best.values())
+
+
+def _hidden_entries(user):
+    """Return normalized list of hidden entries for this user (with compatibility for old rows)."""
+    hidden = get_hidden_menu_items(user)
+    result = []
+    for it in hidden:
+        result.append({
+            "workspace": _norm(it.get("workspace")),
+            "kind": _norm(it.get("item_kind") or it.get("item_type")),
+            "name": _norm(it.get("item_name")),
+            "route": _norm(it.get("item_route")),
+            "label": _norm(it.get("item_label")),
+            "label_ar": _norm(it.get("item_label_ar")),
+            "block_id": _norm(it.get("block_id")),
+            "db_name": _norm(it.get("name")),
+            "modified": (it.get("modified") or ""),
+            "hide": cint(it.get("hide", 1)),
+        })
+        # توافق مع البيانات القديمة: إذا لم يكن kind موجوداً أضف نسخة بلا kind
+        if not _norm(it.get("item_kind") or it.get("item_type")):
+            result.append({
+                "workspace": _norm(it.get("workspace")),
+                "kind": "",
+                "name": _norm(it.get("item_name")),
+                "route": _norm(it.get("item_route")),
+                "label": _norm(it.get("item_label")),
+                "label_ar": _norm(it.get("item_label_ar")),
+                "block_id": _norm(it.get("block_id")),
+                "db_name": _norm(it.get("name")),
+                "modified": (it.get("modified") or ""),
+                "hide": cint(it.get("hide", 1)),
+            })
+    return _dedupe_hidden_entries(result)
+
+
+def _matches_hidden(entry, kind="", name="", route="", label="", block_id="", workspace=""):
+    """Return True if the hidden entry matches provided identifiers (non-empty fields must match)."""
+    if not entry or entry.get("hide") == 0:
+        return False
+    
+    kind_val = _kind_bucket(kind)
+    name_val = _norm(name)
+    route_val = _norm(route)
+    label_val = _norm(label)
+    block_val = _norm(block_id)
+    workspace_val = _norm(workspace)
+
+    ent_kind = _kind_bucket(entry.get("kind") or "")
+    ent_name = _norm(entry.get("name") or "")
+    ent_route = _norm(entry.get("route") or "")
+    ent_label = _norm(entry.get("label") or "")
+    ent_label_ar = _norm(entry.get("label_ar") or "")
+    ent_block = _norm(entry.get("block_id") or "")
+    ent_workspace = _norm(entry.get("workspace") or "")
+
+    if ent_workspace:
+        if not workspace_val or ent_workspace != workspace_val:
+            return False
+
+    # kind must match if BOTH are provided
+    if ent_kind and kind_val and ent_kind != kind_val:
+        return False
+
+    # block_id must match if stored AND provided
+    if ent_block and block_val and ent_block != block_val:
+        return False
+
+    # If block_id matches, accept immediately (after scope/kind checks)
+    if ent_block and block_val and ent_block == block_val:
+        return True
+
+    # If workspace is missing on the entry, enforce strict matching:
+    # prefer name/route matches (more precise), but also allow label if kind matches
+    if not ent_workspace and workspace_val and kind_val not in ("workspace", ""):
+        # First priority: name and route (most precise)
+        if ent_name and name_val and ent_name == name_val:
+            return True
+        if ent_route and route_val and ent_route == route_val:
+            return True
+        # Second priority: label (only if kind matches or is not specified)
+        # This ensures Cards and other label-based items work correctly
+        if label_val and (not ent_kind or not kind_val or ent_kind == kind_val):
+            if ent_label and ent_label == label_val:
+                return True
+            if ent_label_ar and ent_label_ar == label_val:
+                return True
+        return False
+
+    # Workspace entries: allow label/name/route matches.
+    if kind_val == "workspace" or ent_kind == "workspace":
+        if ent_name and name_val and ent_name == name_val:
+            return True
+        if ent_route and route_val and ent_route == route_val:
+            return True
+        if ent_label and label_val and ent_label == label_val:
+            return True
+        if ent_label_ar and label_val and ent_label_ar == label_val:
+            return True
+        return False
+
+    # Non-workspace entries: prefer name/route, label only for legacy rows.
+    if ent_name and name_val and ent_name == name_val:
+        return True
+    if ent_route and route_val and ent_route == route_val:
+        return True
+    if not ent_name and not ent_route and label_val:
+        if ent_label and ent_label == label_val:
+            return True
+        if ent_label_ar and ent_label_ar == label_val:
+            return True
+
+    return False
+
+
+def _get_label_translations(label, hidden_entries=None):
+    """
+    Get both English and Arabic versions of a label for matching.
+    Returns a list of possible label values to check (normalized).
+    Uses both translation files and saved item_label_ar values.
+    """
+    if not label:
+        return []
+    
+    labels_to_check = [_norm(label)]
+    label_norm = _norm(label)
+    
+    try:
+        # 1. الحصول على الترجمات من ملفات الترجمة
+        ar_translations = _get_translations_cached("ar")
+        
+        # إذا كان label الحالي إنجليزي، احصل على الترجمة العربية
+        if label in ar_translations:
+            ar_label = ar_translations[label]
+            if ar_label and ar_label != label:
+                labels_to_check.append(_norm(ar_label))
+        
+        # البحث العكسي: إذا كان label الحالي عربي، احصل على الأصل الإنجليزي
+        ar_rev = _get_reverse_translations_cached("ar")
+        eng_label = ar_rev.get(label_norm)
+        if eng_label:
+            eng_norm = _norm(eng_label)
+            if eng_norm not in labels_to_check:
+                labels_to_check.append(eng_norm)
+        
+        # 2. استخدام البيانات المحفوظة في hidden_entries (item_label_ar)
+        # هذا مهم جداً لأن الترجمات قد لا تحتوي على جميع الليبلات
+        if hidden_entries:
+            for ent in hidden_entries:
+                ent_label = ent.get("label") or ""
+                ent_label_ar = ent.get("label_ar") or ""
+                
+                # إذا كان label الحالي يطابق label إنجليزي محفوظ، أضف label عربي محفوظ
+                if ent_label and _norm(ent_label) == label_norm and ent_label_ar:
+                    if _norm(ent_label_ar) not in labels_to_check:
+                        labels_to_check.append(_norm(ent_label_ar))
+                
+                # إذا كان label الحالي يطابق label عربي محفوظ، أضف label إنجليزي محفوظ
+                if ent_label_ar and _norm(ent_label_ar) == label_norm and ent_label:
+                    if _norm(ent_label) not in labels_to_check:
+                        labels_to_check.append(_norm(ent_label))
+        
+    except Exception as e:
+        frappe.log_error(f"Error in _get_label_translations: {str(e)}", "Menu Visibility Translation Error")
+    
+    # 3. إذا لم نجد ترجمات، حاول استخدام API للحصول على الترجمة
+    # هذا كحل احتياطي إذا فشلت الطرق السابقة
+    if len(labels_to_check) == 1 and hidden_entries:
+        try:
+            # محاولة الحصول على الترجمة من API
+            from medworld_theme.api import get_label_translations
+            translations = get_label_translations(labels=[label], lang="ar")
+            if translations and label in translations:
+                ar_label = translations[label]
+                if ar_label and ar_label != label:
+                    labels_to_check.append(_norm(ar_label))
+        except Exception:
+            pass
+    
+    # إزالة التكرارات
+    return list(set(labels_to_check))
+
+
+def _is_hidden(hidden_entries, kind="", name="", route="", label="", block_id="", workspace=""):
+    """
+    Check if an item is hidden by matching against hidden entries.
+    Automatically checks both English and Arabic labels if available.
+    """
+    # إذا لم يكن هناك أي معرّف (name, route, label كلها فارغة)، لا نخفي
+    if not label and not name and not route:
+        return False
+    
+    # إذا لم يكن هناك hidden_entries، لا نخفي
+    if not hidden_entries:
+        return False
+    
+    # فحص مباشر مع label الحالي أولاً (إذا كان موجوداً)
+    if label:
+        label_norm = _norm(label)
+        if not label_norm:
+            return False  # Empty label after normalization
+        
+        # فحص مباشر
+        for ent in hidden_entries:
+            if _matches_hidden(ent, kind, name, route, label, block_id, workspace):
+                return True
+        
+        # احصل على جميع النسخ المحتملة للـ label (إنجليزي وعربي)
+        # نمرر hidden_entries لاستخدام item_label_ar المحفوظة
+        labels_to_check = _get_label_translations(label, hidden_entries)
+        
+        # فحص مع كل نسخة من label
+        for check_label in labels_to_check:
+            if not check_label or check_label == label_norm:
+                continue  # تم فحصه بالفعل أو فارغ
+            for ent in hidden_entries:
+                # _matches_hidden بالفعل يفحص مع ent_label و ent_label_ar تلقائياً
+                if _matches_hidden(ent, kind, name, route, check_label, block_id, workspace):
+                    return True
+    else:
+        # إذا لم يكن هناك label، استخدم المنطق العادي (name, route فقط)
+        # لكن تأكد من وجود name أو route
+        if not name and not route:
+            return False
+        
+        for ent in hidden_entries:
+            if _matches_hidden(ent, kind, name, route, label, block_id, workspace):
+                return True
+    
+    return False
+
+
+@frappe.whitelist()
+@frappe.read_only()
+def get_desktop_page(page):
+    """Filtered get_desktop_page that drops hidden workspaces/cards/items for the current user."""
+    user = frappe.session.user
+    hidden_entries = _hidden_entries(user)
+
+    # Deserialize page to get workspace name/title
+    if isinstance(page, str):
+        try:
+            page_data = json.loads(page)
+        except Exception:
+            page_data = {}
+    else:
+        page_data = page or {}
+    
+    # Get workspace name/title - try multiple sources
+    ws_name = (page_data.get("name") or 
+               page_data.get("title") or 
+               page_data.get("workspace") or 
+               (isinstance(page, str) and page) or 
+               "")
+    ws_label = (page_data.get("title") or 
+                page_data.get("label") or 
+                ws_name)
+
+    # If the workspace doesn't exist, try resolving by title/label (and Arabic translation)
+    # but don't early-return; let core_get_desktop_page decide.
+    if ws_name and not frappe.db.exists("Workspace", ws_name):
+        resolved = frappe.db.get_value("Workspace", {"title": ws_name}, "name") or \
+            frappe.db.get_value("Workspace", {"label": ws_name}, "name")
+        if not resolved:
+            try:
+                ar_map = _get_translations_cached("ar")
+                ws_norm = _norm(ws_name)
+                for eng_label, ar_label in ar_map.items():
+                    if ar_label and _norm(ar_label) == ws_norm:
+                        resolved = frappe.db.get_value("Workspace", {"title": eng_label}, "name") or \
+                            frappe.db.get_value("Workspace", {"label": eng_label}, "name")
+                        if resolved:
+                            break
+            except Exception:
+                pass
+        if resolved:
+            ws_name = resolved
+
+    def is_hidden(kind, name="", route="", label="", block_id="", workspace=""):
+        scope = workspace or ws_name
+        # allow fallback match when kind is missing/legacy
+        if _is_hidden(hidden_entries, kind, name, route, label, block_id, scope):
+            return True
+        if kind == "workspace":
+            legacy = [e for e in hidden_entries if not e.get("kind")]
+            if legacy and _is_hidden(legacy, "", name, route, label, block_id, scope):
+                return True
+        return False
+
+    # Get base page first to ensure we have valid data
+    try:
+        base = core_get_desktop_page(page)
+    except frappe.DoesNotExistError:
+        return {}
+    if not base:
+        return base
+    
+    # If base has name/title, use them (more reliable)
+    if isinstance(base, dict):
+        base_ws_name = base.get("name") or base.get("title") or ws_name
+        base_ws_label = base.get("title") or base.get("label") or ws_label
+        if base_ws_name:
+            ws_name = base_ws_name
+        if base_ws_label:
+            ws_label = base_ws_label
+
+    # Hide entire workspace only if we have valid workspace name
+    if ws_name and is_hidden("workspace", "", ws_name, ws_label, "", ws_name):
+        return {}
+
+    # Filter cards and their links
+    # Create a deep copy to avoid mutating cached data
+    filtered_base = copy.deepcopy(base)
+    
+    if isinstance(filtered_base.get("cards"), dict):
+        new_cards = []
+        for card_idx, card in enumerate(filtered_base["cards"].get("items", [])):
+            card_label = card.get("label") or ""
+            card_block = _card_block_id(card, ws_name, card_idx)
+            # Only check if card has a label - don't hide cards without labels
+            if card_label:
+                # Check with explicit "Card" kind
+                if is_hidden("Card", "", "", card_label, card_block, ws_name):
+                    continue
+            new_links = []
+            for l in card.get("links") or []:
+                route = l.get("link_to") or ""
+                label = l.get("label") or route
+                name = l.get("name") or ""
+                # Only check if link has at least route or label
+                if route or label:
+                    # Check with explicit "Link" kind
+                    if is_hidden("Link", name, route, label, "", ws_name):
+                        continue
+                new_links.append(l)
+            # Only add card if it has links or is not empty
+            card["links"] = new_links
+            new_cards.append(card)
+        filtered_base["cards"]["items"] = new_cards
+
+    # Filter shortcuts
+    if isinstance(filtered_base.get("shortcuts"), dict):
+        new_sc = []
+        for sc in filtered_base["shortcuts"].get("items", []):
+            route = sc.get("link_to") or ""
+            label = sc.get("label") or route
+            name = sc.get("name") or ""
+            if (route or label) and is_hidden("Shortcut", name, route, label, "", ws_name):
+                continue
+            new_sc.append(sc)
+        filtered_base["shortcuts"]["items"] = new_sc
+
+    # Filter number cards
+    if isinstance(filtered_base.get("number_cards"), dict):
+        new_nc = []
+        for nc in filtered_base["number_cards"].get("items", []):
+            label = nc.get("label") or nc.get("name") or ""
+            name = nc.get("name") or ""
+            if label and is_hidden("Number Card", name, "", label, "", ws_name):
+                continue
+            new_nc.append(nc)
+        filtered_base["number_cards"]["items"] = new_nc
+
+    # Filter charts
+    if isinstance(filtered_base.get("charts"), dict):
+        new_ch = []
+        for ch in filtered_base["charts"].get("items", []):
+            label = ch.get("label") or ch.get("name") or ""
+            name = ch.get("name") or ""
+            if label and is_hidden("Chart", name, "", label, "", ws_name):
+                continue
+            new_ch.append(ch)
+        filtered_base["charts"]["items"] = new_ch
+
+    # Filter quick lists
+    if isinstance(filtered_base.get("quick_lists"), dict):
+        new_ql = []
+        for ql in filtered_base["quick_lists"].get("items", []):
+            label = ql.get("label") or ql.get("name") or ""
+            name = ql.get("name") or ""
+            if label and is_hidden("Quick List", name, "", label, "", ws_name):
+                continue
+            new_ql.append(ql)
+        filtered_base["quick_lists"]["items"] = new_ql
+
+    # Filter custom blocks
+    if isinstance(filtered_base.get("custom_blocks"), dict):
+        new_cb = []
+        for cb in filtered_base["custom_blocks"].get("items", []):
+            label = cb.get("label") or cb.get("custom_block_name") or ""
+            name = cb.get("custom_block_name") or ""
+            if label and is_hidden("Custom Block", name, "", label, "", ws_name):
+                continue
+            new_cb.append(cb)
+        filtered_base["custom_blocks"]["items"] = new_cb
+
+    return filtered_base
+
+
+@frappe.whitelist()
+@frappe.read_only()
+def get_workspace_sidebar_items():
+	"""Sidebar items with workspace hides applied strictly by workspace entries."""
+	data = core_get_workspace_sidebar_items()
+	hidden_entries = [
+		ent
+		for ent in _hidden_entries(frappe.session.user)
+		if ent.get("kind") == "workspace"
+	]
+
+	def ws_hidden(page):
+		"""Check if workspace is hidden, automatically checking both English and Arabic labels."""
+		route = page.get("name") or page.get("route") or ""
+		label = page.get("title") or page.get("label") or route
+		name = page.get("name") or ""
+		
+		# استخدام _is_hidden المحدثة التي تفحص تلقائياً كلا اللغتين
+		return _is_hidden(hidden_entries, "workspace", name, route, label, "", route or name)
+
+	pages = data.get("pages") or []
+	data["pages"] = [p for p in pages if not ws_hidden(p)]
+	return data
+
+
+@frappe.whitelist()
+def get_user_workspace_tree(user=None):
+    """Return sidebar-style tree of workspaces/cards/items for a user (post-permission, pre-hide)."""
+    user = user or frappe.session.user
+    hidden_entries = _hidden_entries(user)
+
+    has_published = frappe.db.has_column("Workspace", "published")
+    has_ws_hidden = frappe.db.has_column("Workspace", "is_hidden")
+    has_link_hidden = frappe.db.has_column("Workspace Link", "is_hidden")
+    has_sc_hidden = frappe.db.has_column("Workspace Shortcut", "is_hidden")
+    has_ws_role = frappe.db.has_table("Workspace Role")
+
+    user_doc = frappe.get_cached_doc("User", user)
+    user_roles = frappe.get_roles(user)
+    allow_mods = [r.module for r in (getattr(user_doc, "allow_modules", []) or []) if getattr(r, "module", None)]
+    block_mods = [r.module for r in (getattr(user_doc, "block_modules", []) or []) if getattr(r, "module", None)]
+
+    where_clauses = []
+    if has_ws_hidden:
+        where_clauses.append("ifnull(w.is_hidden,0)=0")
+    where_clauses.append("ifnull(w.for_user,'') IN ('', %(user)s)")
+    if has_published:
+        where_clauses.append("ifnull(w.published,1)=1")
+    if allow_mods:
+        where_clauses.append("coalesce(w.module,'') in %(allow_mods)s")
+    if block_mods:
+        where_clauses.append("coalesce(w.module,'') not in %(block_mods)s")
+    if has_ws_role:
+        where_clauses.append("(wr.role is null or wr.role in %(roles)s)")
+
+    where_sql = " AND ".join(where_clauses) if where_clauses else "1=1"
+    workspaces = frappe.db.sql(
+        f"""
+        SELECT w.name, COALESCE(w.title, w.name) AS label, w.sequence_id
+        FROM `tabWorkspace` w
+        {"LEFT JOIN `tabWorkspace Role` wr ON wr.parent = w.name" if has_ws_role else ""}
+        WHERE {where_sql}
+        ORDER BY w.sequence_id, w.name
+        """,
+        {
+            "user": user,
+            "roles": user_roles or ["Guest"],
+            "allow_mods": allow_mods or [],
+            "block_mods": block_mods or [],
+        },
+        as_dict=True,
+    )
+    ws_names = [w.name for w in workspaces]
+    children_by_ws = {w.name: {"links": [], "shortcuts": [], "cards": [], "number_cards": [], "charts": [], "quick_lists": [], "custom_blocks": []} for w in workspaces}
+
+    if ws_names:
+        links = frappe.db.sql(
+            """
+            SELECT parent AS workspace, link_type, link_to, label, idx
+            FROM `tabWorkspace Link`
+            WHERE parent in %(parents)s
+              {and_hidden}
+            ORDER BY parent, idx
+            """.format(and_hidden="AND ifnull(is_hidden,0)=0" if has_link_hidden else ""),
+            {"parents": ws_names},
+            as_dict=True,
+        )
+        for l in links:
+            ws = l.workspace
+            if ws not in children_by_ws:
+                continue
+            children_by_ws[ws]["links"].append(l)
+
+        shortcuts = frappe.db.sql(
+            """
+            SELECT parent AS workspace, type AS link_type, link_to, label, idx
+            FROM `tabWorkspace Shortcut`
+            WHERE parent in %(parents)s
+              {and_hidden}
+            ORDER BY parent, idx
+            """.format(and_hidden="AND ifnull(is_hidden,0)=0" if has_sc_hidden else ""),
+            {"parents": ws_names},
+            as_dict=True,
+        )
+        for s in shortcuts:
+            ws = s.workspace
+            if ws not in children_by_ws:
+                continue
+            children_by_ws[ws]["shortcuts"].append(s)
+
+    # Build from get_desktop_page to capture cards/shortcuts/number_cards/charts
+    tree = []
+    for w in workspaces:
+        ws_route = w.name
+        ws_label = w.label or w.name
+        ws_key = (
+            _norm("workspace"),
+            _norm(""),
+            _norm(ws_route),
+            _norm(ws_label),
+            _norm(""),
+        )
+        ws_hidden = _is_hidden(hidden_entries, "workspace", "", ws_route, ws_label, "", ws_route)
+
+        # Load page data using core get_desktop_page
+        page_doc = frappe.get_doc("Workspace", w.name)
+        page_data = core_get_desktop_page(page_doc.as_json()) or {}
+
+        children = []
+
+        # Cards and their links
+        cards = (page_data.get("cards") or {}).get("items", []) if isinstance(page_data.get("cards"), dict) else []
+        for card_idx, card in enumerate(cards):
+            card_label = card.get("label") or ""
+            card_block = _card_block_id(card, ws_route, card_idx)
+            card_hidden = _is_hidden(hidden_entries, "Card", "", "", card_label, card_block, ws_route)
+            card_children = []
+            for l in card.get("links") or []:
+                route = l.get("link_to") or ""
+                label = l.get("label") or route
+                name = l.get("name") or ""
+                key_hidden = _is_hidden(hidden_entries, "link", name, route, label, "", ws_route)
+                card_children.append({
+                    "kind": "Link",
+                    "item_type": l.get("link_type") or "Link",
+                    "item_kind": "Link",
+                    "item_route": route,
+                    "item_label": label,
+                    "item_name": name,
+                    "block_id": l.get("name") or "",
+                    "hidden": key_hidden,
+                })
+            children.append({
+                "kind": "Card",
+                "item_type": "Card",
+                "item_kind": "Card",
+                "item_route": "",
+                "item_label": card_label,
+                "item_name": "",
+                "block_id": card_block,
+                "hidden": card_hidden,
+                "children": card_children,
+            })
+
+        # Shortcuts (top-level)
+        shortcuts = (page_data.get("shortcuts") or {}).get("items", []) if isinstance(page_data.get("shortcuts"), dict) else []
+        for sc in shortcuts:
+            route = sc.get("link_to") or ""
+            label = sc.get("label") or route
+            name = sc.get("name") or ""
+            children.append({
+                "kind": "Shortcut",
+                "item_type": sc.get("link_type") or sc.get("type") or "Shortcut",
+                "item_kind": "Shortcut",
+                "item_route": route,
+                "item_label": label,
+                "item_name": name,
+                "block_id": sc.get("name") or "",
+                "hidden": _is_hidden(hidden_entries, "Shortcut", name, route, label, "", ws_route),
+                })
+
+        # Number Cards
+        number_cards = (page_data.get("number_cards") or {}).get("items", []) if isinstance(page_data.get("number_cards"), dict) else []
+        for nc in number_cards:
+            label = nc.get("label") or nc.get("name") or ""
+            name = nc.get("name") or ""
+            children.append({
+                "kind": "Number Card",
+                "item_type": "Number Card",
+                "item_kind": "Number Card",
+                "item_route": "",
+                "item_label": label,
+                "item_name": name,
+                "block_id": nc.get("name") or "",
+                "hidden": _is_hidden(hidden_entries, "Number Card", name, "", label, "", ws_route),
+            })
+
+        # Charts
+        charts = (page_data.get("charts") or {}).get("items", []) if isinstance(page_data.get("charts"), dict) else []
+        for ch in charts:
+            label = ch.get("label") or ch.get("name") or ""
+            name = ch.get("name") or ""
+            children.append({
+                "kind": "Chart",
+                "item_type": "Chart",
+                "item_kind": "Chart",
+                "item_route": "",
+                "item_label": label,
+                "item_name": name,
+                "block_id": ch.get("name") or "",
+                "hidden": _is_hidden(hidden_entries, "Chart", name, "", label, "", ws_route),
+            })
+
+        tree.append({
+            "workspace": w.name,
+            "workspace_label": ws_label,
+            "workspace_route": ws_route,
+            "hidden": ws_hidden,
+            "children": children,
+        })
+
+    return tree
+
+
+@frappe.whitelist()
+def get_events(start=getdate(), end=getdate().year, user=None, for_reminder=False, filters=None):
+    end = str(getdate().year) + "-12-31"
+    if not user:
+        user = frappe.session.user
+
+    if isinstance(filters, string_types):
+        filters = json.loads(filters)
+
+    filter_condition = get_filters_cond('Event', filters, [])
+
+    tables = ["`tabEvent`"]
+    if "`tabEvent Participants`" in filter_condition:
+        tables.append("`tabEvent Participants`")
+
+    events = frappe.db.sql("""
+        SELECT `tabEvent`.name,
+                `tabEvent`.subject,
+                `tabEvent`.description,
+                `tabEvent`.color,
+                `tabEvent`.starts_on,
+                `tabEvent`.ends_on,
+                `tabEvent`.owner,
+                `tabEvent`.all_day,
+                `tabEvent`.event_type,
+                `tabEvent`.repeat_this_event,
+                `tabEvent`.repeat_on,
+                `tabEvent`.repeat_till,
+                `tabEvent`.monday,
+                `tabEvent`.tuesday,
+                `tabEvent`.wednesday,
+                `tabEvent`.thursday,
+                `tabEvent`.friday,
+                `tabEvent`.saturday,
+                `tabEvent`.sunday
+        FROM {tables}
+        WHERE (
+                (
+                    (date(`tabEvent`.starts_on) BETWEEN date(%(start)s) AND date(%(end)s))
+                    OR (date(`tabEvent`.ends_on) BETWEEN date(%(start)s) AND date(%(end)s))
+                    OR (
+                        date(`tabEvent`.starts_on) <= date(%(start)s)
+                        AND date(`tabEvent`.ends_on) >= date(%(end)s)
+                    )
+                )
+                OR (
+                    date(`tabEvent`.starts_on) <= date(%(start)s)
+                    AND `tabEvent`.repeat_this_event=1
+                    AND coalesce(`tabEvent`.repeat_till, '3000-01-01') > date(%(start)s)
+                )
+            )
+        {reminder_condition}
+        {filter_condition}
+        AND (
+                `tabEvent`.event_type='Public'
+                OR `tabEvent`.owner=%(user)s
+                OR EXISTS(
+                    SELECT `tabDocShare`.name
+                    FROM `tabDocShare`
+                    WHERE `tabDocShare`.share_doctype='Event'
+                        AND `tabDocShare`.share_name=`tabEvent`.name
+                        AND `tabDocShare`.user=%(user)s
+                )
+            )
+        AND `tabEvent`.status='Open'
+        ORDER BY `tabEvent`.starts_on""".format(
+        tables=", ".join(tables),
+        filter_condition=filter_condition,
+        reminder_condition="AND coalesce(`tabEvent`.send_reminder, 0)=1" if for_reminder else ""
+    ), {
+        "start": start,
+        "end": end,
+        "user": user,
+    }, as_dict=1)
+
+    return events
+
+
+@frappe.whitelist()
+def update_menu_modules(modules):
+    modules_list = json.loads(modules)
+    for module in modules_list:
+        if frappe.db.exists("Workspace", module["name"]):
+            if (module["_is_deleted"] == 'true'):
+                frappe.delete_doc("Workspace", module["name"], force=True)
+            else:
+                frappe.db.set_value("Workspace", module["name"], {
+                    "title": module['title'],
+                    "label": module["title"],
+                    "icon": module["icon"],
+                    "sequence_id": int(module["sequence_id"])
+                })
+        else:
+            if (module["_is_new"] == 'true'):
+                workspace = frappe.new_doc("Workspace")
+                workspace.title = module["title"]
+                workspace.icon = module["icon"]
+                workspace.content = module["content"]
+                workspace.label = module["label"]
+                workspace.sequence_id = int(module["sequence_id"])
+                workspace.for_user = ""
+                workspace.public = 1
+                workspace.save(ignore_permissions=True)
+
+    return True
+
+
+@frappe.whitelist()
+def sync_workspace_cards(title, is_public=0, card_order=None):
+    if not title or not card_order:
+        return
+
+    try:
+        card_order = frappe.parse_json(card_order)
+    except Exception:
+        return
+
+    if not isinstance(card_order, list) or not card_order:
+        return
+
+    is_public = cint(is_public)
+    filters = {"public": is_public, "label": title}
+    if not is_public:
+        filters = {
+            "for_user": frappe.session.user,
+            "label": f"{title}-{frappe.session.user}",
+        }
+
+    workspace_name = frappe.db.get_value("Workspace", filters, "name")
+    if not workspace_name:
+        return
+
+    doc = frappe.get_doc("Workspace", workspace_name)
+    prefix_rows = []
+    card_map = {}
+    row_reference = []
+    current_card = None
+
+    for link in doc.get("links", []):
+        row_reference.append(link)
+        if link.type == "Card Break":
+            current_card = link.label
+            card_map.setdefault(current_card, []).append(link)
+        elif current_card and current_card in card_map:
+            card_map[current_card].append(link)
+        else:
+            prefix_rows.append(link)
+
+    ordered_rows = [row.name for row in prefix_rows]
+    seen = set()
+    for label in card_order:
+        section = card_map.get(label)
+        if not section:
+            continue
+        ordered_rows.extend(row.name for row in section)
+        seen.add(label)
+
+    obsolete = []
+    for label, rows in card_map.items():
+        if label in seen:
+            continue
+        obsolete.extend(row.name for row in rows)
+
+    if obsolete:
+        frappe.db.delete("Workspace Link", {"name": ("in", obsolete)})
+        ordered_rows = [name for name in ordered_rows if name not in obsolete]
+
+    seen.clear()
+    remaining = []
+    for row in row_reference:
+        if row.name in obsolete or row.name in ordered_rows:
+            continue
+
+        if row.type == "Card Break" and row.label not in seen:
+            seen.add(row.label)
+            ordered_rows.append(row.name)
+        elif row.type != "Card Break":
+            ordered_rows.append(row.name)
+
+    card_boundaries = {}
+    for name in ordered_rows:
+        row = next((r for r in row_reference if r.name == name), None)
+        if row and row.type == "Card Break":
+            card_boundaries[name] = len(ordered_rows) + 1
+
+    for card_name in card_boundaries:
+        card_boundaries[card_name] = ordered_rows.index(card_name)
+
+    current_card = None
+    link_counts = {}
+    for name in ordered_rows:
+        row = next((r for r in row_reference if r.name == name), None)
+        if not row:
+            continue
+
+        if row.type == "Card Break":
+            current_card = row
+            link_counts[current_card.name] = 0
+        elif current_card:
+            link_counts[current_card.name] += 1
+
+    for idx, row_name in enumerate(ordered_rows, start=1):
+        row = next((r for r in row_reference if r.name == row_name), None)
+        if not row:
+            continue
+        values = {"idx": idx}
+        if row.type == "Card Break":
+            values["link_count"] = link_counts.get(row_name, row.link_count)
+            values["link_type"] = ""
+            values["link_to"] = ""
+        frappe.db.set_value("Workspace Link", row_name, values, update_modified=False)
+
+    return True
+
+
+def clear():
+    frappe.local.session_obj.update(force=True)
+    frappe.local.db.commit()
+    clear_user_cache(frappe.session.user)
+    frappe.response['message'] = _("Cache Cleared")

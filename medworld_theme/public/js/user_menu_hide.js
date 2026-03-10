@@ -1,0 +1,396 @@
+(() => {
+    const norm = (v) => (v || "").toString().trim().toLowerCase();
+    const sanitizeType = (kind) => {
+        const map = {
+            "workspace": "Workspace",
+            "doctype": "DocType",
+            "report": "Report",
+            "page": "Page",
+            "link": "Link",
+            "card": "Card",
+            "shortcut": "Shortcut",
+            "number card": "Number Card",
+            "chart": "Chart",
+            "quick list": "Quick List",
+            "custom block": "Custom Block",
+        };
+        const k = norm(kind);
+        return map[k] || "Link";
+    };
+
+    const normalize_kind = (kind) => {
+        const k = norm(kind);
+        if (["doctype", "report", "page", "link"].includes(k)) {
+            return "link";
+        }
+        return k;
+    };
+
+    const matches_row = (row, workspace, route, label, kind, name, block_id) => {
+        const w = norm(workspace);
+        const r = norm(route);
+        const l = norm(label);
+        const k = normalize_kind(kind);
+        const n = norm(name);
+        const b = norm(block_id);
+        const rowKind = normalize_kind(row.item_kind || row.item_type);
+        const rowWorkspace = norm(row.workspace);
+        if (w) {
+            if (rowWorkspace && rowWorkspace !== w) return false;
+            if (!rowWorkspace && rowKind !== "workspace") return false;
+        } else if (rowWorkspace) {
+            return false;
+        }
+
+        if (k && rowKind && rowKind !== k) return false;
+
+        if (b) {
+            const rowBlock = norm(row.block_id);
+            if (rowBlock) {
+                return rowBlock === b;
+            }
+            // No stored block_id yet, fall through to label/route matching.
+        }
+
+        if (r) {
+            if (norm(row.item_route) === r) return true;
+            if (!row.item_route && l) {
+                if (norm(row.item_label) === l) return true;
+                if (norm(row.item_label_ar) === l) return true;
+                if (row.item_label && norm(__(row.item_label)) === l) return true;
+            }
+            if (!row.item_route && n && norm(row.item_name) === n) return true;
+            return false;
+        }
+
+        if (n) {
+            if (norm(row.item_name) === n) return true;
+            if (!row.item_name && l) {
+                if (norm(row.item_label) === l) return true;
+                if (norm(row.item_label_ar) === l) return true;
+                if (row.item_label && norm(__(row.item_label)) === l) return true;
+            }
+            return false;
+        }
+
+        if (l) {
+            if (norm(row.item_label) === l) return true;
+            if (norm(row.item_label_ar) === l) return true;
+            if (row.item_label && norm(__(row.item_label)) === l) return true;
+        }
+
+        return false;
+    };
+
+    const find_rows = (frm, workspace, route, label, kind, name, block_id) => {
+        return (frm.doc.menu_hide_items || []).filter((row) =>
+            matches_row(row, workspace, route, label, kind, name, block_id)
+        );
+    };
+
+    const find_row = (frm, workspace, route, label, kind, name, block_id) => {
+        return find_rows(frm, workspace, route, label, kind, name, block_id)[0];
+    };
+
+    const set_hide_row = (frm, { workspace, route, label, item_type, item_kind, item_name, block_id }, hide) => {
+        let rows = find_rows(frm, workspace, route, label, item_kind, item_name, block_id);
+        if (!rows.length && block_id) {
+            rows = find_rows(frm, workspace, route, label, item_kind, item_name, "");
+        }
+        const set_row_value = (target, field, value) => {
+            if (target && target.doctype && target.name) {
+                frappe.model.set_value(target.doctype, target.name, field, value);
+            } else if (target) {
+                target[field] = value;
+            }
+        };
+        if (hide) {
+            if (!rows.length) {
+                rows = [frm.add_child("menu_hide_items")];
+            }
+            rows.forEach((target) => {
+                target.workspace = workspace || "";
+                target.item_type = sanitizeType(item_type);
+                target.item_route = route || "";
+                target.item_label = label || "";
+                target.item_kind = item_kind || item_type || "Link";
+                target.item_name = item_name || "";
+                target.block_id = block_id || target.block_id || "";
+                if (label && !target.item_label_ar) {
+                    target.item_label_ar = label; // ضمان وجود نسخة مطابقة للغتين حتى قبل الترجمة
+                }
+                set_row_value(target, "hide", 1);
+            });
+            
+            // الحصول على الترجمة العربية للـ label تلقائياً (غير متزامن)
+            if (label && !rows.some((r) => r.item_label_ar)) {
+                frappe.call({
+                    method: "medworld_theme.api.get_label_translations",
+                    args: {
+                        labels: JSON.stringify([label]),
+                        lang: "ar"
+                    },
+                    callback: (r) => {
+                        if (r.message && r.message[label]) {
+                            rows.forEach((target) => {
+                                if (!target.item_label_ar) {
+                                    target.item_label_ar = r.message[label];
+                                }
+                            });
+                            frm.refresh_field("menu_hide_items");
+                        }
+                    },
+                    error: () => {
+                            // في حالة الخطأ، لا نفعل شيئاً (الترجمة اختيارية)
+                        }
+                    });
+                }
+        } else if (rows.length) {
+            // عند الإظهار احذف الصفوف المطابقة لتفادي التراكم والتكرار
+            const filtered = (frm.doc.menu_hide_items || []).filter((row) => {
+                return !rows.includes(row);
+            });
+            frm.doc.menu_hide_items = filtered;
+        }
+        frm.dirty();
+        frm.refresh_field("menu_hide_items");
+    };
+
+    const build_tree_html = (data) => {
+        const $list = $('<ul class="menu-tree-list" style="list-style:none;padding-left:0;"></ul>');
+
+        data.forEach((ws, wsIdx) => {
+            const wsId = `ws-${wsIdx}`;
+            const $wsLi = $('<li class="workspace-item" style="margin-bottom:6px;"></li>');
+            const $wsLabel = $(`
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <input type="checkbox" class="menu-tree-check" data-kind="workspace" data-workspace="${frappe.utils.escape_html(ws.workspace || "")}" data-route="${frappe.utils.escape_html(ws.workspace_route || ws.workspace || "")}" data-label="${frappe.utils.escape_html(ws.workspace_label || ws.workspace || "")}" data-name="" data-block="" ${ws.hidden ? "checked" : ""}/>
+                    <strong>${frappe.utils.escape_html(ws.workspace_label || ws.workspace || "")}</strong>
+                </div>
+            `);
+            $wsLi.append($wsLabel);
+
+            if (Array.isArray(ws.children) && ws.children.length) {
+                const $childList = $('<ul style="list-style:none;padding-left:18px;margin-top:4px;"></ul>');
+                ws.children.forEach((card, cardIdx) => {
+                    const cardId = `${wsId}-card-${cardIdx}`;
+                    const cardChecked = card.hidden ? "checked" : "";
+                    const cardLabel = card.item_label || __("Card");
+                    const $cardLi = $(`
+                        <li style="margin:4px 0;">
+                            <div style="display:flex;align-items:center;gap:6px;">
+                                <input type="checkbox" class="menu-tree-check" data-kind="${frappe.utils.escape_html(card.kind || 'Card')}" data-workspace="${frappe.utils.escape_html(ws.workspace || "")}" data-route="${frappe.utils.escape_html(card.item_route || '')}" data-label="${frappe.utils.escape_html(cardLabel)}" data-type="${frappe.utils.escape_html(card.item_type || card.kind || '')}" data-name="${frappe.utils.escape_html(card.item_name || '')}" data-block="${frappe.utils.escape_html(card.block_id || '')}" ${cardChecked}/>
+                                <span><b>${frappe.utils.escape_html(cardLabel)}</b> <span class="text-muted" style="font-size:11px;">(${frappe.utils.escape_html(card.item_kind || card.kind || '')})</span></span>
+                            </div>
+                        </li>
+                    `);
+
+                    // Children of card
+                    if (Array.isArray(card.children) && card.children.length) {
+                        const $items = $('<ul style="list-style:none;padding-left:18px;margin-top:4px;"></ul>');
+                        card.children.forEach((ch, chIdx) => {
+                            const checked = ch.hidden ? "checked" : "";
+                            const $ch = $(`
+                                <li style="margin:2px 0;">
+                                    <label style="display:flex;align-items:center;gap:6px;">
+                                        <input type="checkbox" class="menu-tree-check" data-kind="${frappe.utils.escape_html(ch.kind || 'Item')}" data-workspace="${frappe.utils.escape_html(ws.workspace || "")}" data-route="${frappe.utils.escape_html(ch.item_route || '')}" data-label="${frappe.utils.escape_html(ch.item_label || ch.item_route || '')}" data-type="${frappe.utils.escape_html(ch.item_type || ch.kind || '')}" data-name="${frappe.utils.escape_html(ch.item_name || '')}" data-block="${frappe.utils.escape_html(ch.block_id || '')}" ${checked}/>
+                                        <span>${frappe.utils.escape_html(ch.item_label || ch.item_route || "")}</span>
+                                        <span class="text-muted" style="font-size:11px;">(${frappe.utils.escape_html(ch.item_kind || ch.kind || '')})</span>
+                                    </label>
+                                </li>
+                            `);
+                            $items.append($ch);
+                        });
+                        $cardLi.append($items);
+                    }
+
+                    $childList.append($cardLi);
+                });
+                $wsLi.append($childList);
+            }
+
+            $list.append($wsLi);
+        });
+
+        return $list;
+    };
+
+    const render_tree = (frm, data) => {
+        const field = frm.get_field("menu_tree_html");
+        if (!field) return;
+        const $w = field.$wrapper;
+        $w.empty();
+        if (!Array.isArray(data) || !data.length) {
+            $w.html('<div class="text-muted">' + __("No menu items found for this user.") + "</div>");
+            return;
+        }
+
+        const $tree = build_tree_html(data);
+        $w.append($tree);
+
+        // أحداث التبديل
+        $w.off("change", ".menu-tree-check");
+        $w.on("change", ".menu-tree-check", function () {
+            const $cb = $(this);
+            const hide = $cb.is(":checked");
+            const kind = ($cb.data("kind") || "").toString();
+            const workspace = $cb.data("workspace") || "";
+            const route = $cb.data("route") || "";
+            const label = $cb.data("label") || "";
+            const itemType = $cb.data("type") || (kind === "workspace" ? "Workspace" : "Link");
+            const itemName = $cb.data("name") || "";
+            const blockId = $cb.data("block") || "";
+
+            // حدّث الجدول
+            set_hide_row(frm, { workspace, route, label, item_type: itemType, item_kind: kind, item_name: itemName, block_id: blockId }, hide);
+
+            // في حال إخفاء/إظهار workspace أو Card، طبّق على الأبناء
+            if (kind === "workspace") {
+                const $children = $cb.closest("li.workspace-item").find('.menu-tree-check').not($cb);
+                $children.each(function () {
+                    const $child = $(this);
+                    $child.prop("checked", hide);
+                    const cRoute = $child.data("route") || "";
+                    const cLabel = $child.data("label") || "";
+                    const cType = $child.data("type") || "";
+                    const cKind = $child.data("kind") || "";
+                    const cName = $child.data("name") || "";
+                    const cBlock = $child.data("block") || "";
+                    set_hide_row(frm, { workspace, route: cRoute, label: cLabel, item_type: cType, item_kind: cKind, item_name: cName, block_id: cBlock }, hide);
+                });
+            } else if (kind && kind.toLowerCase() === "card") {
+                const $children = $cb.closest("li").find('.menu-tree-check[data-kind]').not($cb);
+                $children.each(function () {
+                    const $child = $(this);
+                    $child.prop("checked", hide);
+                    const cRoute = $child.data("route") || "";
+                    const cLabel = $child.data("label") || "";
+                    const cType = $child.data("type") || "";
+                    const cKind = $child.data("kind") || "";
+                    const cName = $child.data("name") || "";
+                    const cBlock = $child.data("block") || "";
+                    set_hide_row(frm, { workspace, route: cRoute, label: cLabel, item_type: cType, item_kind: cKind, item_name: cName, block_id: cBlock }, hide);
+                });
+            }
+        });
+    };
+
+    const load_menu_tree = (frm) => {
+        const field = frm.get_field("menu_tree_html");
+        if (!field) return;
+        field.$wrapper.empty().html('<div class="text-muted">' + __("Loading menu tree...") + "</div>");
+        frappe.call({
+            method: "medworld_theme.api.get_user_workspace_tree",
+            args: { user: frm.doc.name },
+            freeze: true,
+            callback: (r) => {
+                render_tree(frm, Array.isArray(r.message) ? r.message : []);
+            },
+            error: () => {
+                field.$wrapper.html('<div class="text-danger">' + __("Failed to load menu tree.") + "</div>");
+            },
+        });
+    };
+
+    const ensure_label_translations = (frm) => {
+        const rows = (frm.doc.menu_hide_items || []).filter(
+            (row) => row.hide && row.item_label && !row.item_label_ar
+        );
+        if (!rows.length) {
+            return Promise.resolve();
+        }
+        const labels = Array.from(new Set(rows.map((row) => row.item_label)));
+        return new Promise((resolve) => {
+            frappe.call({
+                method: "medworld_theme.api.get_label_translations",
+                args: {
+                    labels: JSON.stringify(labels),
+                    lang: "ar",
+                },
+                callback: (r) => {
+                    const map = (r && r.message) || {};
+                    rows.forEach((row) => {
+                        if (map[row.item_label]) {
+                            row.item_label_ar = map[row.item_label];
+                        } else if (!row.item_label_ar) {
+                            row.item_label_ar = row.item_label; // fallback للغة واحدة لضمان المطابقة
+                        }
+                    });
+                    resolve();
+                },
+                error: () => {
+                    rows.forEach((row) => {
+                        if (!row.item_label_ar) {
+                            row.item_label_ar = row.item_label; // fallback عند فشل الاتصال
+                        }
+                    });
+                    resolve();
+                },
+            });
+        });
+    };
+
+    frappe.ui.form.on("User", {
+        refresh(frm) {
+            if (!frm.doc || frm.is_new()) return;
+            load_menu_tree(frm);
+            frm.add_custom_button(__("Reload Menu Tree"), () => load_menu_tree(frm), __("Menu Visibility"));
+        },
+        copy_from_user(frm) {
+            const fromUser = (frm.doc && frm.doc.copy_from_user) || "";
+            if (!fromUser) return;
+
+            if (frm.is_new()) {
+                frappe.msgprint(__("Please save this user first, then copy settings."));
+                frm.set_value("copy_from_user", "");
+                return;
+            }
+
+            const toUser = frm.doc.name;
+            if (!toUser || fromUser === toUser) {
+                frm.set_value("copy_from_user", "");
+                return;
+            }
+
+            frappe.confirm(
+                __(
+                    "This will overwrite Roles, User Permissions and Menu Visibility for <b>{0}</b> using <b>{1}</b>. Continue?",
+                    [frappe.utils.escape_html(toUser), frappe.utils.escape_html(fromUser)]
+                ),
+                () => {
+                    frappe.call({
+                        method: "medworld_theme.api.copy_user_access_settings",
+                        args: { from_user: fromUser, to_user: toUser },
+                        freeze: true,
+                        callback: (r) => {
+                            const msg = (r && r.message) || {};
+                            if (msg && msg.ok) {
+                                frappe.show_alert({ message: __("Copied user settings."), indicator: "green" });
+                                frm.reload_doc();
+                            } else {
+                                frappe.msgprint(__("Copy failed."));
+                            }
+                        },
+                    });
+                },
+                () => {
+                    // Cancel: clear the field to avoid accidental overwrite later.
+                    frm.set_value("copy_from_user", "");
+                }
+            );
+        },
+        copy_menu_button(frm) {
+            // Optional manual trigger (custom Button field). Uses the selected Copy From User value.
+            if (!frm.doc || frm.is_new()) return;
+            if (!frm.doc.copy_from_user) {
+                frappe.msgprint(__("Select a user in Copy From User first."));
+                return;
+            }
+            // Reuse the same logic.
+            frm.trigger("copy_from_user");
+        },
+        before_save(frm) {
+            return ensure_label_translations(frm);
+        },
+    });
+})();

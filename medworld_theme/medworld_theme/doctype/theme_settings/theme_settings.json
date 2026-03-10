@@ -29,6 +29,8 @@
   "hide_icon_tooltip",
   "always_close_sub_menu",
   "menu_opening_type",
+  "menu_opening_page_light_image",
+  "menu_opening_page_dark_image",
   "login_page_section",
   "login_page_logo",
   "enable_background",
@@ -74,7 +76,8 @@
    "depends_on": "eval:doc.background_type=='Single Photo'",
    "fieldname": "background_photo",
    "fieldtype": "Attach Image",
-   "label": "Background Photo"
+   "label": "Background Photo",
+   "default": "/assets/medworld_theme/images/default-background.jpg"
   },
   {
    "depends_on": "eval:doc.background_type=='Slideshow'",
@@ -121,7 +124,8 @@
   {
    "fieldname": "loading_image",
    "fieldtype": "Attach Image",
-   "label": "Loading Image"
+   "label": "Loading Image",
+   "default": "/assets/medworld_theme/images/default-logo.png"
   },
   {
    "fieldname": "theme_layout_tab",
@@ -140,6 +144,20 @@
    "fieldtype": "Select",
    "label": "Menu Opening Type",
    "options": "Workspace\nDashboard\nPage"
+  },
+  {
+   "depends_on": "eval:doc.menu_opening_type=='Page'",
+   "fieldname": "menu_opening_page_light_image",
+   "fieldtype": "Attach Image",
+   "label": "Menu Opening Page Image (Light)",
+   "default": "/assets/medworld_theme/images/logonight.png"
+  },
+  {
+   "depends_on": "eval:doc.menu_opening_type=='Page'",
+   "fieldname": "menu_opening_page_dark_image",
+   "fieldtype": "Attach Image",
+   "label": "Menu Opening Page Image (Dark)",
+   "default": "/files/pagem_dark.png"
   },
   {
    "default": "0",
@@ -175,12 +193,14 @@
   {
    "fieldname": "login_page_logo",
    "fieldtype": "Attach Image",
-   "label": "Login Page Logo"
+   "label": "Login Page Logo",
+   "default": "/assets/medworld_theme/images/default-login-bg.png"
   },
   {
    "fieldname": "theme_logo",
    "fieldtype": "Attach Image",
-   "label": "Theme Logo"
+   "label": "Theme Logo",
+   "default": "/assets/medworld_theme/images/default-logo.png"
   },
   {
    "fieldname": "layout_tab",
@@ -219,7 +239,8 @@
   {
    "fieldname": "favicon",
    "fieldtype": "Attach Image",
-   "label": "Favicon"
+   "label": "Favicon",
+   "default": "/assets/medworld_theme/images/default-favicon.svg"
   },
   {
    "default": "0",

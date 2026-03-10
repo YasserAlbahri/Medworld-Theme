@@ -94,15 +94,15 @@
 .btn {
   box-shadow: none $imp;
   transition: all 0.2s ease-in-out;
-  border-radius: 5px;
+  border-radius: 0px;
 }
 
 .form-control {
   background: #ffffff;
   border: 1px solid #bbb;
   transition: all 0.2s ease-in-out;
-  box-shadow: inset 1px 1px 7px -4px rgba(0, 0, 0, 0.44) $imp;
-  border-radius: 5px;
+  box-shadow: none $imp;
+  border-radius: 0px;
 
   &:hover {
     border-color: #999999;
@@ -111,8 +111,26 @@
   &:focus {
     background: #ffffff $imp;
     border-color: var(--primary) $imp;
-    box-shadow: inset 1px 1px 7px -4px rgba(0, 0, 0, 0.44), 0 4px 24px 0 rgba(34, 41, 47, 0.10) $imp;
+    box-shadow: none $imp;
   }
+}
+
+// Borders for form columns only (avoid affecting external layout columns)
+.form-layout .form-column {
+  flex: 1 0 auto;
+  width: 14%;
+  margin: 10px;
+  border: 2px solid #b7c9dd;
+  border-radius: 20px $imp;
+  padding: 15px;
+  box-sizing: border-box;
+  box-shadow: none $imp;
+}
+
+// Form tabs
+.form-tabs-list .form-tabs .nav-item .nav-link {
+  color: #ffffff $imp;
+  box-shadow: none $imp;
 }
 
 .btn.btn-default {
@@ -241,7 +259,7 @@ button.btn.btn-default.btn-primary {
     top: 0px;
     z-index: 50;
     color: #666666;
-    border-radius: 5px 0px 0px 5px;
+    border-radius: 0px 0px 0px 0px;
     transition: all 0.2s ease-in;
 
     &.sidebar-shown {
@@ -274,7 +292,7 @@ button.btn.btn-default.btn-primary {
   font-size: 16px;
   padding: 0;
   color: #ffffff;
-  border-radius: 5px;
+  border-radius: 0px;
   transition: all 0.2s ease-in;
 
   &:hover {
@@ -301,7 +319,7 @@ button.btn.btn-default.btn-primary {
 .widget.shortcut-widget-box {
   border: 1px solid #ddd;
   box-shadow: 0px 3px 10px -5px rgba(0, 0, 0, .20);
-  border-radius: 6px;
+  border-radius: 0px;
   padding: 10px 12px;
   transition: all 0.2s ease-in-out;
 
@@ -336,7 +354,7 @@ button.btn.btn-default.btn-primary {
     border-bottom: 1px solid #ddd;
     padding: 15px;
     margin: -15px -15px -6px -15px;
-    border-radius: 12px 12px 0px 0px;
+    border-radius: 0px 0px 0px 0px;
   }
 
   .link-item {
@@ -383,7 +401,7 @@ button.btn.btn-default.btn-primary {
     text-align: center;
     line-height: 65px;
     color: #ffffff;
-    border-radius: 5px;
+    border-radius: 0px;
     transition: all 0.2s ease-in-out;
 
     &.active {
@@ -446,7 +464,7 @@ button.btn.btn-default.btn-primary {
   opacity: .8;
   color: #444;
   border: 1px solid #aaa;
-  border-radius: 4px;
+  border-radius: 0px;
   margin: 2.4px 2px;
   transition: all 0.2s ease-in-out;
 
@@ -491,7 +509,7 @@ body.dv-theme-dark {
     border: 1px solid var(--blue-300);
     margin-bottom: 15px;
     padding: 15px;
-    border-radius: 7px;
+    border-radius: 0px;
     transition: all 0.4s ease-in-out;
 
     > li.sidebar-label {
@@ -504,7 +522,7 @@ body.dv-theme-dark {
       position: relative;
       align-items: center;
       cursor: pointer;
-      border-radius: 5px 5px 0px 0px;
+      border-radius: 0px 0px 0px 0px;
 
       &:after {
         font-family: "Font Awesome 5 Pro";
@@ -549,7 +567,7 @@ body.dv-theme-dark {
     border: 1px solid var(--blue-300);
     margin-bottom: 15px;
     padding: 15px;
-    border-radius: 7px;
+    border-radius: 0px;
 
     > li.sidebar-label {
       background: var(--blue-100);
@@ -559,7 +577,7 @@ body.dv-theme-dark {
       font-weight: 700;
       padding: 8px 15px;
       cursor: pointer;
-      border-radius: 5px 5px 0px 0px;
+      border-radius: 0px 0px 0px 0px;
 
       &:after {
         font-family: "Font Awesome 5 Pro";
@@ -630,7 +648,7 @@ body.dv-theme-dark {
     color: var(--blue-800) !important;
     margin: 10px;
     padding: 20px 20px 20px 0px;
-    border-radius: 7px;
+    border-radius: 0px;
 
     .level-item {
       font-weight: 700;
@@ -644,17 +662,17 @@ body.dv-theme-dark {
   }
 
   .result > .list-row-container:nth-of-type(2) {
-    border-radius: 7px 7px 0px 0px;
+    border-radius: 0px 0px 0px 0px;
     overflow: hidden;
   }
 
   .result > .list-row-container:last-of-type {
-    border-radius: 0px 0px 7px 7px;
+    border-radius: 0px 0px 0px 0px;
     overflow: hidden;
   }
 
   .result > .list-row-container:last-of-type:nth-of-type(2) {
-    border-radius: 7px;
+    border-radius: 0px;
     overflow: hidden;
   }
 
@@ -825,7 +843,7 @@ button.btn.btn-default {
 
 .form-section .section-head, .form-dashboard-section .section-head {
   background: var(--blue-100);
-  border-radius: 7px;
+  border-radius: 0px;
   font-weight: 700;
   letter-spacing: 0;
   color: var(--blue-600);
@@ -838,7 +856,7 @@ button.btn.btn-default {
   .form-tabs {
     background: var(--blue-100);
     margin: 5px;
-    border-radius: 7px;
+    border-radius: 0px;
     padding: 0px 12px;
     overflow: hidden;
 
@@ -851,7 +869,7 @@ button.btn.btn-default {
       padding: 0px 8px;
       color: #6c7881;
       font-weight: 700;
-      border-radius: 7px;
+      border-radius: 0px;
       transition: all 0.2s ease-in-out;
 
       &:hover {
@@ -1014,7 +1032,7 @@ button.btn.btn-default {
     padding: 0px 8px;
     font-size: 12px;
     color: #fff;
-    border-radius: 4px;
+    border-radius: 0px;
     position: relative;
     top: 0px;
 
@@ -1036,7 +1054,11 @@ button.btn.btn-default {
 
 .awesomplete > [role=listbox] > li:hover, .awesomplete > [role=listbox] > li[aria-selected=true], .awesomplete > [role=listbox] > [role=option]:hover, .awesomplete > [role=listbox] > [role=option][aria-selected=true] {
   background-color: var(--awesomplete-hover-bg);
-  color: var(--awesomplete-hover-color);
+  color: #ffffff $imp;
+
+  * {
+    color: #ffffff $imp;
+  }
 }
 
 .frappe-control .action-btn, .frappe-control .link-btn {
@@ -1102,7 +1124,7 @@ button.btn.btn-default {
   background-color: var(--blue-50);
   border: 1px solid var(--blue-300);
   padding: 15px;
-  border-radius: 10px;
+  border-radius: 0px;
 }
 
 .layout-main-section.frappe-card {

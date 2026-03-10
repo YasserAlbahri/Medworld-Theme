@@ -1,0 +1,307 @@
+.mw-pwa-install-banner {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: calc(12px + env(safe-area-inset-bottom));
+  z-index: 10050;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(55, 117, 177, 0.6);
+  background: linear-gradient(180deg, #103756, #0a2740);
+  box-shadow: 0 18px 40px rgba(4, 13, 24, 0.45);
+  color: #e6f0fc;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.22s ease, transform 0.22s ease;
+  direction: rtl;
+  text-align: right;
+}
+
+.mw-pwa-install-banner.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.mw-pwa-install-banner__content {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.mw-pwa-install-banner__title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 2px;
+}
+
+.mw-pwa-install-banner__desc {
+  font-size: 12px;
+  color: #c8dbef;
+  line-height: 1.45;
+}
+
+.mw-pwa-install-banner__actions {
+  display: inline-flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.mw-pwa-install-banner__btn {
+  min-height: 34px;
+  min-width: 76px;
+  border-radius: 10px;
+  border: 0;
+  padding: 7px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.mw-pwa-install-banner__btn--primary {
+  background: linear-gradient(180deg, #3da3ff, #1d74cf);
+  color: #fff;
+}
+
+.mw-pwa-install-banner__btn--secondary {
+  border: 1px solid rgba(102, 149, 196, 0.65);
+  background: rgba(8, 24, 39, 0.35);
+  color: #d7e9fb;
+}
+
+.mw-pwa-runtime-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 10058;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(5, 20, 34, 0.72);
+  backdrop-filter: blur(5px);
+}
+
+.mw-pwa-runtime-gate__card {
+  width: min(92vw, 360px);
+  border-radius: 16px;
+  border: 1px solid rgba(70, 128, 184, 0.45);
+  background: linear-gradient(180deg, rgba(12, 38, 63, 0.98), rgba(7, 26, 45, 0.98));
+  box-shadow: 0 24px 54px rgba(2, 11, 20, 0.55);
+  padding: 18px 16px;
+  text-align: right;
+  direction: rtl;
+}
+
+.mw-pwa-runtime-gate__logo {
+  width: 54px;
+  height: 54px;
+  border-radius: 14px;
+  border: 1px solid rgba(87, 146, 204, 0.55);
+  background: rgba(255, 255, 255, 0.08);
+  padding: 6px;
+  object-fit: contain;
+  margin-bottom: 10px;
+}
+
+.mw-pwa-runtime-gate__title {
+  color: #fff;
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.mw-pwa-runtime-gate__desc {
+  color: #c4d9ef;
+  font-size: 13px;
+  line-height: 1.65;
+  margin-bottom: 12px;
+}
+
+.mw-pwa-runtime-gate__actions {
+  display: flex;
+  gap: 8px;
+}
+
+.mw-pwa-runtime-gate__btn {
+  flex: 1;
+  min-height: 36px;
+  border-radius: 10px;
+  border: 0;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.mw-pwa-runtime-gate__btn--primary {
+  color: #fff;
+  background: linear-gradient(180deg, #40a7ff, #1d74cf);
+}
+
+.mw-pwa-runtime-gate__btn--secondary {
+  color: #d7e9fb;
+  border: 1px solid rgba(105, 151, 196, 0.68);
+  background: rgba(8, 24, 39, 0.35);
+}
+
+.mw-pwa-launch-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 10060;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: radial-gradient(circle at 22% 5%, #174d78 0%, #0a2b46 45%, #05192e 100%);
+  transition: opacity 0.28s ease, visibility 0.28s ease;
+}
+
+.mw-pwa-launch-splash.is-leaving {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.mw-pwa-launch-splash__glow {
+  position: absolute;
+  width: 360px;
+  height: 360px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(41, 144, 245, 0.35) 0%, rgba(41, 144, 245, 0) 70%);
+  filter: blur(10px);
+  animation: mw-pwa-glow 3.2s ease-in-out infinite;
+}
+
+.mw-pwa-launch-splash__card {
+  position: relative;
+  width: min(90vw, 320px);
+  border: 1px solid rgba(81, 140, 196, 0.45);
+  border-radius: 18px;
+  padding: 20px 18px 16px;
+  background: linear-gradient(180deg, rgba(8, 32, 54, 0.86), rgba(7, 24, 41, 0.92));
+  box-shadow: 0 24px 60px rgba(3, 11, 20, 0.55);
+  text-align: center;
+}
+
+.mw-pwa-launch-splash__logo {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  border: 1px solid rgba(95, 155, 212, 0.55);
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  margin: 0 auto 12px;
+  object-fit: contain;
+}
+
+.mw-pwa-launch-splash__name {
+  color: #fff;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  margin-bottom: 3px;
+}
+
+.mw-pwa-launch-splash__subtitle {
+  color: #b8d2eb;
+  font-size: 12px;
+  line-height: 1.5;
+  margin-bottom: 14px;
+}
+
+.mw-pwa-launch-splash__bar {
+  position: relative;
+  width: 100%;
+  height: 4px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(76, 133, 188, 0.24);
+}
+
+.mw-pwa-launch-splash__bar::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 45%;
+  background: linear-gradient(90deg, #54bbff, #2d92f4);
+  animation: mw-pwa-progress 1.35s ease-in-out infinite;
+  border-radius: 999px;
+}
+
+@keyframes mw-pwa-glow {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 0.45;
+  }
+  50% {
+    transform: translateY(-8px) scale(1.05);
+    opacity: 0.7;
+  }
+}
+
+@keyframes mw-pwa-progress {
+  0% {
+    transform: translateX(-120%);
+  }
+  60% {
+    transform: translateX(140%);
+  }
+  100% {
+    transform: translateX(140%);
+  }
+}
+
+@media (max-width: 640px) {
+  .mw-pwa-install-banner {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .mw-pwa-install-banner__actions {
+    width: 100%;
+  }
+
+  .mw-pwa-install-banner__btn {
+    flex: 1 1 auto;
+  }
+
+  .mw-pwa-runtime-gate__actions {
+    flex-direction: column;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+  .mw-pwa-install-banner {
+    left: 18px;
+    right: 18px;
+    bottom: calc(18px + env(safe-area-inset-bottom));
+    gap: 16px;
+    padding: 14px 16px;
+    border-radius: 16px;
+  }
+
+  .mw-pwa-install-banner__title {
+    font-size: 16px;
+    margin-bottom: 4px;
+  }
+
+  .mw-pwa-install-banner__desc {
+    font-size: 14px;
+    line-height: 1.55;
+  }
+
+  .mw-pwa-install-banner__actions {
+    gap: 10px;
+  }
+
+  .mw-pwa-install-banner__btn {
+    min-height: 42px;
+    min-width: 92px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    font-size: 14px;
+  }
+}

@@ -1,0 +1,96 @@
+{
+ "actions": [],
+ "creation": "2025-12-31 23:19:01.410789",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "workspace",
+  "item_type",
+  "item_kind",
+  "item_name",
+  "block_id",
+  "item_route",
+  "item_label",
+  "item_label_ar",
+  "hide",
+  "notes"
+ ],
+ "fields": [
+  {
+   "fieldname": "workspace",
+   "fieldtype": "Data",
+   "label": "Workspace"
+  },
+  {
+   "fieldname": "item_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Item Type",
+   "options": "\nWorkspace\nDocType\nReport\nPage\nLink\nCard\nShortcut\nNumber Card\nChart\nQuick List\nCustom Block",
+   "reqd": 1
+  },
+  {
+   "fieldname": "item_kind",
+   "fieldtype": "Data",
+   "label": "Item Kind"
+  },
+  {
+   "fieldname": "item_name",
+   "fieldtype": "Data",
+   "label": "Item Name"
+  },
+  {
+   "fieldname": "block_id",
+   "fieldtype": "Data",
+   "label": "Block ID"
+  },
+  {
+   "description": "route or doctype/report name",
+   "fieldname": "item_route",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Route/Name"
+  },
+  {
+   "fieldname": "item_label",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Label"
+  },
+  {
+   "fieldname": "item_label_ar",
+   "fieldtype": "Data",
+   "label": "Label (Arabic)"
+  },
+  {
+   "default": "1",
+   "fieldname": "hide",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Hide"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Notes"
+  }
+ ],
+ "grid_page_length": 50,
+ "hide_toolbar": 1,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2025-12-31 23:19:01.410789",
+ "modified_by": "Administrator",
+ "module": "Medworld Theme",
+ "name": "User Menu Hide Item",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

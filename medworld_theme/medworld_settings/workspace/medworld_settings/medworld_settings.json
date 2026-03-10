@@ -1,15 +1,15 @@
 {
  "charts": [],
- "content": "[{\"id\":\"NO5yYHJopc\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Your Shortcuts\\n\\t\\t\\t\\n\\t\\t\\n\\t\\t\\t\\n\\t\\t\\n\\t\\t\\t\\n\\t\\t</b></span>\",\"col\":12}},{\"id\":\"CDxIM-WuZ9\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"System Settings\",\"col\":3}},{\"id\":\"-Uh7DKJNJX\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Accounts Settings\",\"col\":3}},{\"id\":\"K9ST9xcDXh\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Stock Settings\",\"col\":3}},{\"id\":\"27IdVHVQMb\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Selling Settings\",\"col\":3}},{\"id\":\"Rwp5zff88b\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Buying Settings\",\"col\":3}},{\"id\":\"hkfnQ2sevf\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Global Defaults\",\"col\":3}},{\"id\":\"jjxI_PDawD\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Print Settings\",\"col\":3}},{\"id\":\"R3CoYYFXye\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"yynbm1J_VO\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Settings</b></span>\",\"col\":12}},{\"id\":\"KDCv2MvSg3\",\"type\":\"card\",\"data\":{\"card_name\":\"Module Settings\",\"col\":4}},{\"id\":\"Q0_bqT7cxQ\",\"type\":\"card\",\"data\":{\"card_name\":\"Email / Notifications\",\"col\":4}},{\"id\":\"UnqK5haBnh\",\"type\":\"card\",\"data\":{\"card_name\":\"Website\",\"col\":4}},{\"id\":\"kp7u1H5hCd\",\"type\":\"card\",\"data\":{\"card_name\":\"Core\",\"col\":4}},{\"id\":\"Ufc3jycgy9\",\"type\":\"card\",\"data\":{\"card_name\":\"Printing\",\"col\":4}},{\"id\":\"89bSNzv3Yh\",\"type\":\"card\",\"data\":{\"card_name\":\"Workflow\",\"col\":4}}]",
+ "content": "[{\"id\":\"NO5yYHJopc\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Your Shortcuts\\n\\t\\t\\t\\n\\t\\t\\n\\t\\t\\t\\n\\t\\t\\n\\t\\t\\t\\n\\t\\t</b></span>\",\"col\":12}},{\"id\":\"CDxIM-WuZ9\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"System Settings\",\"col\":3}},{\"id\":\"-Uh7DKJNJX\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Accounts Settings\",\"col\":3}},{\"id\":\"K9ST9xcDXh\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Stock Settings\",\"col\":3}},{\"id\":\"27IdVHVQMb\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Selling Settings\",\"col\":3}},{\"id\":\"Rwp5zff88b\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Buying Settings\",\"col\":3}},{\"id\":\"hkfnQ2sevf\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Global Defaults\",\"col\":3}},{\"id\":\"jjxI_PDawD\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Print Settings\",\"col\":3}},{\"id\":\"R3CoYYFXye\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"yynbm1J_VO\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Settings</b></span>\",\"col\":12}},{\"id\":\"KDCv2MvSg3\",\"type\":\"card\",\"data\":{\"card_name\":\"Module Settings\",\"col\":4}},{\"id\":\"Q0_bqT7cxQ\",\"type\":\"card\",\"data\":{\"card_name\":\"Email / Notifications\",\"col\":4}},{\"id\":\"UnqK5haBnh\",\"type\":\"card\",\"data\":{\"card_name\":\"Website\",\"col\":4}},{\"id\":\"kp7u1H5hCd\",\"type\":\"card\",\"data\":{\"card_name\":\"Core\",\"col\":4}},{\"id\":\"Ufc3jycgy9\",\"type\":\"card\",\"data\":{\"card_name\":\"Printing\",\"col\":4}},{\"id\":\"89bSNzv3Yh\",\"type\":\"card\",\"data\":{\"card_name\":\"Workflow\",\"col\":4}},{\"id\":\"2qm6XH90rd\",\"type\":\"card\",\"data\":{\"card_name\":\"System \",\"col\":4}}]",
  "creation": "2022-01-27 13:14:47.349433",
  "custom_blocks": [],
  "docstatus": 0,
  "doctype": "Workspace",
  "for_user": "",
- "hide_custom": 0,
- "icon": "flaticon-admin",
+ "hide_custom": 1,
+ "icon": "fal fa-folder",
  "idx": 0,
- "is_hidden": 0,
+ "is_hidden": 1,
  "label": "Medworld Settings",
  "links": [
   {
@@ -70,8 +70,120 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Email / Notifications",
+   "label": "Module Settings",
+   "link_count": 10,
+   "link_to": "",
+   "link_type": "",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Accounts Settings",
    "link_count": 0,
+   "link_to": "Accounts Settings",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Stock Settings",
+   "link_count": 0,
+   "link_to": "Stock Settings",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Selling Settings",
+   "link_count": 0,
+   "link_to": "Selling Settings",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Buying Settings",
+   "link_count": 0,
+   "link_to": "Buying Settings",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Manufacturing Settings",
+   "link_count": 0,
+   "link_to": "Manufacturing Settings",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "CRM Settings",
+   "link_count": 0,
+   "link_to": "CRM Settings",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Projects Settings",
+   "link_count": 0,
+   "link_to": "Projects Settings",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Support Settings",
+   "link_count": 0,
+   "link_to": "Support Settings",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Document Naming Rule",
+   "link_count": 0,
+   "link_to": "Document Naming Rule",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Authorization Control",
+   "link_count": 0,
+   "link_to": "Authorization Control",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Email / Notifications",
+   "link_count": 7,
+   "link_to": "",
+   "link_type": "",
    "onboard": 0,
    "type": "Card Break"
   },
@@ -156,7 +268,9 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Website",
-   "link_count": 0,
+   "link_count": 5,
+   "link_to": "",
+   "link_type": "",
    "onboard": 0,
    "type": "Card Break"
   },
@@ -218,8 +332,52 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Printing",
+   "label": "Core",
+   "link_count": 3,
+   "link_to": "",
+   "link_type": "",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "System Settings",
    "link_count": 0,
+   "link_to": "System Settings",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Domain Settings",
+   "link_count": 0,
+   "link_to": "Domain Settings",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Global Defaults",
+   "link_count": 0,
+   "link_to": "Global Defaults",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Printing",
+   "link_count": 4,
+   "link_to": "",
+   "link_type": "",
    "onboard": 0,
    "type": "Card Break"
   },
@@ -271,7 +429,9 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Workflow",
-   "link_count": 0,
+   "link_count": 3,
+   "link_to": "",
+   "link_type": "",
    "onboard": 0,
    "type": "Card Break"
   },
@@ -311,133 +471,25 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Core",
-   "link_count": 3,
-   "onboard": 0,
-   "type": "Card Break"
-  },
-  {
-   "dependencies": "",
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "System Settings",
-   "link_count": 0,
-   "link_to": "System Settings",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "dependencies": "",
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Domain Settings",
-   "link_count": 0,
-   "link_to": "Domain Settings",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Global Defaults",
-   "link_count": 0,
-   "link_to": "Global Defaults",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Module Settings",
-   "link_count": 8,
+   "label": "System ",
+   "link_count": 1,
+   "link_to": "",
+   "link_type": "",
    "onboard": 0,
    "type": "Card Break"
   },
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Accounts Settings",
+   "label": "Address Template",
    "link_count": 0,
-   "link_to": "Accounts Settings",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Stock Settings",
-   "link_count": 0,
-   "link_to": "Stock Settings",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Selling Settings",
-   "link_count": 0,
-   "link_to": "Selling Settings",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Buying Settings",
-   "link_count": 0,
-   "link_to": "Buying Settings",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Manufacturing Settings",
-   "link_count": 0,
-   "link_to": "Manufacturing Settings",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "CRM Settings",
-   "link_count": 0,
-   "link_to": "CRM Settings",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Projects Settings",
-   "link_count": 0,
-   "link_to": "Projects Settings",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Support Settings",
-   "link_count": 0,
-   "link_to": "Support Settings",
+   "link_to": "Address Template",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
   }
  ],
- "modified": "2025-12-19 23:35:47.391209",
+ "modified": "2026-02-16 02:24:24.039680",
  "modified_by": "Administrator",
  "module": "Medworld Settings",
  "name": "Medworld Settings",
@@ -450,9 +502,12 @@
  "roles": [
   {
    "role": "Administrator"
+  },
+  {
+   "role": "System Manager"
   }
  ],
- "sequence_id": 36.0,
+ "sequence_id": 31.0,
  "shortcuts": [
   {
    "color": "Grey",
